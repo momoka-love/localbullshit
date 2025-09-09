@@ -188,8 +188,8 @@ async function drawCard() {
   });
 }
 
-// ---- Call BS ----
-async function callBS() {
+// ---- bullshit! ----
+async function bullshit() {
   if (!joined || pile.length===0) return;
   await lobbyRef.transaction(game=>{
     if (!game || !game.pile) return game;
