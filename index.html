@@ -1,24 +1,112 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Bullshit! </title>
+  <meta charset="UTF-8">
+  <title>Bullshit Card Game</title>
   <style>
-    body { font-family: Times New Roman, sans-serif; background: #222; color: white; text-align: center; }
-    input { padding: 5px; margin: 5px; }
-    button { padding: 5px 10px; margin: 5px; cursor: pointer; }
-    .card { display: inline-block; margin: 5px; padding: 10px; background: #444; border-radius: 5px; cursor: pointer; }
-    .selected { background: #ff9800 !important; }
-    #lobby-container, #game-container-wrapper { margin-top: 20px; }
-    #game-container { margin-top: 20px; }
-    #players-list { list-style: none; padding: 0; }
-    #winner-banner { margin: 20px; }
-    #chat-container { max-height: 200px; overflow-y: auto; border: 1px solid #666; padding: 5px; margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    input {
+      padding: 5px;
+      margin: 5px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #333;
+      color: white;
+    }
+
+    button {
+      padding: 5px 10px;
+      margin: 5px;
+      border-radius: 4px;
+      border: none;
+      background: #ff9800;
+      color: #222;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      background: #555;
+      color: #999;
+      cursor: not-allowed;
+    }
+
+    .card {
+      display: inline-block;
+      margin: 5px;
+      padding: 10px 15px;
+      background: #444;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 18px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .card.selected {
+      background: #ff9800;
+      transform: translateY(-5px);
+    }
+
+    #lobby-container, #game-container-wrapper {
+      margin-top: 20px;
+    }
+
+    #game-container, #pile-container {
+      margin-top: 15px;
+      min-height: 50px;
+    }
+
+    #players-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+    }
+
+    #winner-banner {
+      margin: 20px 0;
+    }
+
+    #chat-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #666;
+      padding: 5px;
+      margin: 10px auto;
+      background: #111;
+      width: 80%;
+      text-align: left;
+    }
+
+    #chat-input {
+      width: 60%;
+      padding: 5px;
+      margin-right: 5px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #333;
+      color: white;
+    }
+
+    #controls {
+      margin-top: 10px;
+    }
   </style>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="firebase.js"></script>
-  <script src="game.js" defer></script>
+  
+  <!-- Your client.js -->
+  <script src="client.js" defer></script>
 </head>
 <body>
 
@@ -34,7 +122,7 @@
   <div id="game-container-wrapper" style="display:none;">
     <div id="winner-banner" style="display:none;"></div>
 
-    <h3 id="game-info">Current Turn: </h3>
+    <h3 id="game-info">Current Turn:</h3>
 
     <h4>Players</h4>
     <ul id="players-list"></ul>
