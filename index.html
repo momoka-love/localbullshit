@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BS Card Game</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #game-container-wrapper { display: none; }
+  #game-layout { display: flex; gap: 20px; }
+  #game-container { display: flex; flex-wrap: wrap; gap: 10px; width: 300px; }
+  .card { padding: 10px; border: 1px solid #333; border-radius: 5px; cursor: pointer; width: 50px; text-align: center; }
+  #pile-container { margin-top: 10px; border: 1px solid #aaa; padding: 5px; min-height: 50px; }
+  #lobby-info { border: 1px solid #aaa; padding: 10px; width: 200px; }
+  #chat-container { border: 1px solid #aaa; padding: 10px; width: 250px; display: flex; flex-direction: column; gap: 5px; }
+  #chat-messages { height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; background: #f9f9f9; }
+  #chat-input { flex: 0; padding: 5px; }
+  button { padding: 5px 10px; }
+</style>
+</head>
+<body>
+
+<!-- --- Lobby Join Screen --- -->
+<div id="lobby-container">
+  <h2>Join a Lobby</h2>
+  <input type="text" id="player-name" placeholder="Your name" />
+  <input type="text" id="lobby-name" placeholder="Lobby name" />
+  <button onclick="joinLobby()">Join</button>
+</div>
+
+<!-- --- Game Area --- -->
+<div id="game-container-wrapper">
+  <div id="game-layout">
+    
+    <!-- Player Hand & Pile -->
+    <div>
+      <h3>Your Hand</h3>
+      <div id="game-container"></div>
+      <h3>Pile</h3>
+      <div id="pile-container"></div>
+      <p id="game-info"></p>
+      <button id="btn-draw" onclick="drawCard()">Draw</button>
+      <button id="btn-call" onclick="callBS()">Call BS</button>
+      <button onclick="leaveLobby()">Leave Lobby</button>
+    </div>
+    
+    <!-- Lobby Info / Leaderboard -->
+    <div id="lobby-info">
+      <h3>Lobby: <span id="lobby-name-display"></span></h3>
+      <h4>Players:</h4>
+      <ul id="players-list"></ul>
+    </div>
+
+    <!-- Chat -->
+    <div id="chat-container">
+      <h4>Lobby Chat</h4>
+      <div id="chat-messages"></div>
+      <input type="text" id="chat-input" placeholder="Type your message..." />
+      <button id="chat-send">Send</button>
+    </div>
+
+<div id="winner-banner" style="display:none; text-align:center; margin-bottom:10px;"></div>
+
+  </div>
+</div>
+
+<!-- --- Firebase & Client JS --- -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="client.js"></script>
+
+</body>
+</html>
