@@ -106,41 +106,78 @@ function toggleCard(idx){
   updateUI();
 }
 
-// ---- Play Selected ----
+// ---- Play Selected (safer) ----
 async function playSelected(){
   if(!joined) return alert("Not in a lobby!");
   if(currentTurn!==playerName) return alert("Not your turn!");
   if(selectedCards.size===0) return alert("Select cards!");
 
-  const cards=[...selectedCards].map(i=>playerHand[i]);
-  const lastDeclared=pile.length?pile[pile.length-1].declared:null;
-  const requiredDeclared=lastDeclared?getNextRank(lastDeclared):null;
+  // Capture selected indices as a stable array of numbers
+  const indices = [...selectedCards].map(i => Number(i)).sort((a,b)=>a-b);
 
-  let declaredRank=prompt(`Playing ${cards.length} card(s). Declare rank:`+
-    (requiredDeclared?` (Must declare ${requiredDeclared})`:''),
-    requiredDeclared||cards[0].slice(0,-1));
-  declaredRank=(declaredRank||requiredDeclared||cards[0].slice(0,-1)).trim();
-  if(requiredDeclared&&declaredRank!==requiredDeclared) return alert(`Must declare ${requiredDeclared}!`);
+  // Use client copy of playerHand only for the prompt/declared default (UI convenience)
+  const cardsPreview = indices.map(i => playerHand[i]).filter(Boolean);
+  const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
+  const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
+  let declaredRank = prompt(
+    `Playing ${indices.length} card(s). Declare rank:` +
+    (requiredDeclared ? ` (Must declare ${requiredDeclared})` : ''),
+    requiredDeclared || (cardsPreview[0] ? cardsPreview[0].slice(0,-1) : ranks[0])
+  );
+  declaredRank = (declaredRank || requiredDeclared || (cardsPreview[0] ? cardsPreview[0].slice(0,-1) : ranks[0])).trim();
+  if(requiredDeclared && declaredRank !== requiredDeclared) return alert(`Must declare ${requiredDeclared}!`);
 
-  await lobbyRef.transaction(game=>{
-    if(!game) return;
-    game.players=game.players||{};
-    game.pile=game.pile||[];
-    if(game.currentTurn!==playerName) return game;
-    const hand=game.players[playerName]||[];
-    const newHand=hand.filter((c,i)=>!selectedCards.has(i));
-    cards.forEach(c=>game.pile.push({card:c, declared:declaredRank, player:playerName}));
-    game.players[playerName]=newHand;
-    if(newHand.length===0) game.winner=playerName;
-    const allPlayers=Object.keys(game.players);
-    if(allPlayers.length>0){
-      const idx=allPlayers.indexOf(game.currentTurn);
-      game.currentTurn=allPlayers[(idx+1)%allPlayers.length];
+  // Transaction only uses primitive `indices` (not the Set) and server-side hand
+  const result = await lobbyRef.transaction(game => {
+    if(!game) return game;               // do not return undefined
+    game.players = game.players || {};
+    game.pile = game.pile || [];
+
+    // ensure it's still this player's turn
+    if(game.currentTurn !== playerName) return game;
+
+    const hand = (game.players[playerName] || []).slice();
+
+    // Validate indices against server-side hand
+    if(indices.some(i => i < 0 || i >= hand.length)) {
+      // indices mismatch (maybe another client changed hand) -> abort safely
+      console.warn("Index mismatch in playSelected transaction; aborting");
+      return game;
     }
+
+    // Build playedCards from server-side hand (guarantees correctness)
+    const playedCards = indices.map(i => hand[i]);
+
+    // Remove played indices from hand (walk server-side hand)
+    const newHand = hand.filter((_, idx) => !indices.includes(idx));
+
+    // Add to pile
+    playedCards.forEach(c => {
+      game.pile.push({ card: c, declared: declaredRank, player: playerName });
+    });
+
+    // Save back hand
+    game.players[playerName] = newHand;
+
+    // Check winner
+    if(newHand.length === 0) game.winner = playerName;
+
+    // Advance turn safely. Use a deterministic ordering:
+    const allPlayers = Object.keys(game.players).sort(); // sorted to be deterministic
+    if(allPlayers.length > 0) {
+      // find current turn index; if not found fallback to first
+      let idx = allPlayers.indexOf(game.currentTurn);
+      if(idx === -1) idx = 0;
+      game.currentTurn = allPlayers[(idx + 1) % allPlayers.length];
+    } else {
+      game.currentTurn = null;
+    }
+
     return game;
   });
 
-  selectedCards.clear(); // auto unselect
+  // If transaction succeeded (result.committed), clear client selection and UI
+  selectedCards.clear();
 }
 
 // ---- Draw ----
