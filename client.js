@@ -18,11 +18,8 @@ const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 let playerName = "";
 let lobbyName = "";
 let lobbyRef = null;
-
-// store refs & callbacks so .off() cancels the exact listener
-let lobbyValueCallback = null;
-let messagesRef = null;
-let messagesCallback = null;
+let lobbyUnsub = null;
+let chatUnsub = null;
 
 let playerHand = [];
 let pile = [];
@@ -43,17 +40,6 @@ function randomCard() {
   return r + s;
 }
 
-// helper: safe init of game object inside transactions
-function ensureGameShape(game) {
-  if (!game) {
-    game = { players: {}, pile: [], currentTurn: null, winner: null };
-  } else {
-    game.players = game.players || {};
-    game.pile = game.pile || [];
-  }
-  return game;
-}
-
 // ---- Join Lobby ----
 async function joinLobby() {
   playerName = document.getElementById('player-name').value.trim();
@@ -67,83 +53,57 @@ async function joinLobby() {
   lobbyRef = db.ref('lobbies/' + lobbyName);
 
   try {
-    // quick write to ensure connection (non-destructive)
     await lobbyRef.child('testConnection').set({ time: Date.now() });
 
-    // UI swap
     document.getElementById('lobby-container').style.display = 'none';
     document.getElementById('game-container-wrapper').style.display = 'block';
 
     if (!joined) {
       joined = true;
-      // initial hand locally (will be set on server)
-      playerHand = Array.from({length:5}, () => randomCard());
+      playerHand = Array.from({ length: 5 }, () => randomCard());
 
-      // Add player to the lobby using a transaction that won't wipe data
+      // Add player
       await lobbyRef.child('players').transaction(players => {
         players = players || {};
         if (!players[playerName]) players[playerName] = playerHand.slice();
         return players;
       });
 
-      // Ensure currentTurn exists
       await lobbyRef.child('currentTurn').transaction(ct => ct || playerName);
     }
 
-    // Remove old listeners if any (use stored callbacks/refs)
-    if (lobbyRef && lobbyValueCallback) {
-      lobbyRef.off('value', lobbyValueCallback);
-      lobbyValueCallback = null;
-    }
-    if (messagesRef && messagesCallback) {
-      messagesRef.off('child_added', messagesCallback);
-      messagesRef = null;
-      messagesCallback = null;
-    }
+    // Remove old listeners
+    if (lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+    if (chatUnsub) lobbyRef.off('child_added', chatUnsub);
 
-    // Setup onDisconnect to remove this player if they disconnect unexpectedly
-    const playerRef = lobbyRef.child('players').child(playerName);
-    try {
-      await playerRef.onDisconnect().remove();
-    } catch (e) {
-      // onDisconnect may throw if not connected yet; ignore safely
-      console.warn('onDisconnect registration failed (may retry):', e);
-    }
-
-    // Game updates (store callback so we can remove it later)
-    lobbyValueCallback = snapshot => {
+    // Game updates
+    lobbyUnsub = lobbyRef.on('value', snapshot => {
       const game = snapshot.val() || {};
       pile = game.pile || [];
       currentTurn = game.currentTurn || "";
       if (game.players && game.players[playerName]) {
-        // keep local hand in-sync with server authoritative hand
         playerHand = game.players[playerName].slice();
       }
       updateUI(game.players || {}, game.winner || null);
-    };
-    lobbyRef.on('value', lobbyValueCallback);
+    });
 
     // Chat messages
-    messagesRef = lobbyRef.child('messages');
-    messagesCallback = snap => {
+    chatUnsub = lobbyRef.child('messages').on('child_added', snap => {
       const msg = snap.val();
       if (!msg) return;
       const chatMessages = document.getElementById('chat-messages');
       const div = document.createElement('div');
       const time = new Date(msg.timestamp).toLocaleTimeString();
-      // use textContent to avoid HTML injection
       div.textContent = `[${time}] ${msg.player}: ${msg.text}`;
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
       if (chatMessages.childNodes.length > 100) {
         chatMessages.removeChild(chatMessages.firstChild);
       }
-    };
-    messagesRef.on('child_added', messagesCallback);
+    });
 
   } catch (err) {
-    alert("Firebase write failed: " + (err && err.message ? err.message : err));
-    console.error(err);
+    alert("Firebase write failed: " + err.message);
   }
 }
 
@@ -156,18 +116,10 @@ function toggleCard(index) {
 
 // ---- Play selected cards ----
 async function playSelected() {
-  if (!lobbyRef) return alert("Not connected to a lobby.");
   if (currentTurn !== playerName) return alert("Not your turn!");
   if (selectedCards.size === 0) return alert("Select at least one card!");
 
-  // capture actual card strings now (client-side snapshot)
   const cards = [...selectedCards].map(i => playerHand[i]);
-
-  // Basic client validation
-  if (cards.some(c => typeof c === 'undefined')) {
-    return alert("Selection invalid. Please reselect your cards.");
-  }
-
   const lastDeclared = pile.length ? pile[pile.length - 1].declared : null;
   const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
 
@@ -176,159 +128,105 @@ async function playSelected() {
     (requiredDeclared ? ` (Must declare: ${requiredDeclared})` : ""),
     requiredDeclared || cards[0].slice(0, -1)
   );
-  declaredRank = (declaredRank || requiredDeclared || cards[0].slice(0,-1)).trim();
+  declaredRank = (declaredRank || requiredDeclared || cards[0].slice(0, -1)).trim();
 
   if (requiredDeclared && declaredRank !== requiredDeclared) {
     return alert(`Invalid. You must declare: ${requiredDeclared}`);
   }
-  if (!ranks.includes(declaredRank)) {
-    return alert("Invalid rank declared.");
-  }
 
-  try {
-    const result = await lobbyRef.transaction(game => {
-      // safest approach: if there's no snapshot, abort rather than create an empty object
-      if (!game) return;
+  await lobbyRef.transaction(game => {
+    if (!game) return; // FIX: do not return {}
 
-      // ensure minimal shape
-      game.players = game.players || {};
-      game.pile = game.pile || [];
+    console.log("Before playSelected tx:", game);
 
-      // server-side turn check
-      if (game.currentTurn !== playerName) return game;
+    game.players = game.players || {};
+    game.pile = game.pile || [];
 
-      const serverHand = (game.players[playerName] || []).slice();
+    if (game.currentTurn !== playerName) return game;
 
-      // remove each played card by value from the server hand (one occurrence each)
-      const newHand = serverHand.slice();
-      for (const card of cards) {
-        const idx = newHand.indexOf(card);
-        if (idx === -1) {
-          // abort the transaction unchanged if the server hand is missing a card
-          return game;
-        }
-        newHand.splice(idx, 1);
-      }
+    const hand = (game.players[playerName] || []).slice();
+    const newHand = hand.filter((c, i) => !selectedCards.has(i));
 
-      // push pile entries (note: storing actual card here keeps original behavior;
-      // consider storing only declared to avoid leaking card values)
-      for (const card of cards) {
-        game.pile.push({ card, declared: declaredRank, player: playerName });
-      }
-
-      game.players[playerName] = newHand;
-
-      if (newHand.length === 0) {
-        game.winner = playerName;
-      }
-
-      // advance turn safely among present players
-      const allPlayers = Object.keys(game.players);
-      if (allPlayers.length > 0) {
-        const idx = allPlayers.indexOf(game.currentTurn);
-        // if currentTurn somehow missing, default to first player
-        const nextIdx = (idx === -1) ? 0 : (idx + 1) % allPlayers.length;
-        game.currentTurn = allPlayers[nextIdx];
-      }
-
-      return game;
+    cards.forEach(card => {
+      game.pile.push({ card, declared: declaredRank, player: playerName });
     });
 
-    // transaction completed (committed or aborted) — clear selection if successful
-    // result.committed === true indicates it was applied
-    if (result && result.committed) {
-      selectedCards.clear();
-    } else {
-      // not applied (e.g., abort due to mismatch); client will get latest snapshot via listener
-      console.warn("Play not applied (transaction aborted). Game state will be refreshed.");
+    game.players[playerName] = newHand;
+
+    if (newHand.length === 0) {
+      game.winner = playerName;
     }
-  } catch (err) {
-    console.error("playSelected transaction failed:", err);
-    alert("Play failed: " + (err && err.message ? err.message : err));
-  }
+
+    const allPlayers = Object.keys(game.players);
+    if (allPlayers.length > 0) {
+      const idx = allPlayers.indexOf(game.currentTurn);
+      game.currentTurn = allPlayers[(idx + 1) % allPlayers.length];
+    }
+
+    return game;
+  });
+
+  selectedCards.clear();
 }
 
 // ---- Draw Card ----
 async function drawCard() {
   if (!lobbyRef) return alert("Not connected to a lobby.");
-  // add a random card to player's hand atomically
   const newCard = randomCard();
-  try {
-    await lobbyRef.child('players').child(playerName).transaction(hand => {
-      hand = hand || [];
-      hand.push(newCard);
-      return hand;
-    });
-  } catch (err) {
-    console.error("drawCard transaction failed:", err);
-    alert("Draw failed: " + (err && err.message ? err.message : err));
-  }
+  await lobbyRef.child('players').child(playerName).transaction(hand => {
+    hand = hand || [];
+    hand.push(newCard);
+    return hand;
+  });
 }
 
 // ---- Call BS ----
 async function callBS() {
   if (!lobbyRef) return alert("Not connected.");
-  try {
-    await lobbyRef.transaction(game => {
-      if (!game) return;
+  await lobbyRef.transaction(game => {
+    if (!game || !game.pile || game.pile.length === 0) return game;
 
-      game.players = game.players || {};
-      game.pile = game.pile || [];
+    console.log("Before callBS tx:", game);
 
-      if (!game.pile || game.pile.length === 0) return game;
+    const last = game.pile[game.pile.length - 1];
+    const realRank = last.card.slice(0, -1);
+    const pileCards = game.pile.map(p => p.card);
 
-      const last = game.pile[game.pile.length - 1];
-      const realRank = last.card.slice(0, -1);
-      const pileCards = game.pile.map(p => p.card);
+    game.players = game.players || {};
+    if (realRank === last.declared) {
+      game.players[playerName] = (game.players[playerName] || []).concat(pileCards);
+    } else {
+      game.players[last.player] = (game.players[last.player] || []).concat(pileCards);
+    }
 
-      // Ensure both players exist
-      game.players[playerName] = game.players[playerName] || [];
-      game.players[last.player] = game.players[last.player] || [];
-
-      if (realRank === last.declared) {
-        // caller was wrong; caller takes pile
-        game.players[playerName] = game.players[playerName].concat(pileCards);
-      } else {
-        // caller was right; player who lied takes pile
-        game.players[last.player] = game.players[last.player].concat(pileCards);
-      }
-
-      game.pile = [];
-      game.currentTurn = playerName;
-
-      return game;
-    });
-  } catch (err) {
-    console.error("callBS transaction failed:", err);
-    alert("Call BS failed: " + (err && err.message ? err.message : err));
-  }
+    game.pile = [];
+    game.currentTurn = playerName;
+    return game;
+  });
 }
 
 // ---- Send Chat ----
 function sendMessage() {
   const input = document.getElementById('chat-input');
-  const text = (input.value || '').trim();
+  const text = input.value.trim();
   if (!text || !lobbyRef || !playerName) return;
 
   lobbyRef.child('messages').push({
     player: playerName,
     text: text,
     timestamp: Date.now()
-  }).then(()=>{ input.value = ''; }).catch(err=>{
-    console.error('sendMessage failed', err);
-  });
+  }).then(() => { input.value = ''; });
 }
 document.getElementById('chat-send').onclick = sendMessage;
 document.getElementById('chat-input').addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
 
 // ---- Update UI ----
 function updateUI(playersObj = {}, winner = null) {
-  // Normalize players to arrays
   for (let name in playersObj) {
     if (!Array.isArray(playersObj[name])) playersObj[name] = [];
   }
 
-  // --- Winner banner ---
+  // Winner banner
   const banner = document.getElementById('winner-banner');
   if (winner) {
     banner.style.display = 'block';
@@ -341,7 +239,7 @@ function updateUI(playersObj = {}, winner = null) {
     banner.style.display = 'none';
   }
 
-  // --- Hand ---
+  // Hand
   const container = document.getElementById('game-container');
   container.innerHTML = '';
   playerHand.forEach((c, i) => {
@@ -353,7 +251,7 @@ function updateUI(playersObj = {}, winner = null) {
     container.appendChild(div);
   });
 
-  // --- Pile ---
+  // Pile
   const pileContainer = document.getElementById('pile-container');
   pileContainer.innerHTML = '';
   pile.forEach(p => {
@@ -363,7 +261,7 @@ function updateUI(playersObj = {}, winner = null) {
     pileContainer.appendChild(div);
   });
 
-  // --- Leaderboard ---
+  // Leaderboard
   const playersList = document.getElementById('players-list');
   playersList.innerHTML = '';
   Object.entries(playersObj).forEach(([name, hand]) => {
@@ -374,10 +272,10 @@ function updateUI(playersObj = {}, winner = null) {
     playersList.appendChild(li);
   });
 
-  // --- Info ---
+  // Info
   document.getElementById('game-info').textContent = `Current Turn: ${currentTurn}`;
 
-  // --- Buttons ---
+  // Buttons
   document.getElementById('btn-draw').disabled = (currentTurn !== playerName || winner);
   document.getElementById('btn-call').disabled = (pile.length === 0 || winner);
   document.getElementById('btn-play').disabled = (currentTurn !== playerName || winner);
@@ -386,44 +284,29 @@ function updateUI(playersObj = {}, winner = null) {
 // ---- Play Again ----
 async function playAgain() {
   if (!lobbyRef) return;
-  try {
-    await lobbyRef.transaction(game => {
-      // if game is missing, initialize safely instead of returning {}
-      game = ensureGameShape(game);
-      const players = game.players || {};
-      for (let name in players) {
-        players[name] = Array.from({ length: 5 }, () => randomCard());
-      }
-      game.players = players;
-      game.pile = [];
-      game.winner = null;
-      game.currentTurn = Object.keys(players)[0] || null;
-      return game;
-    });
-  } catch (err) {
-    console.error("playAgain failed:", err);
-    alert("Play again failed: " + (err && err.message ? err.message : err));
-  }
+  await lobbyRef.transaction(game => {
+    if (!game) return; // FIX
+
+    console.log("Before playAgain tx:", game);
+
+    const players = game.players || {};
+    for (let name in players) {
+      players[name] = Array.from({ length: 5 }, () => randomCard());
+    }
+    game.players = players;
+    game.pile = [];
+    game.winner = null;
+    game.currentTurn = Object.keys(players)[0] || null;
+    return game;
+  });
 }
 
 // ---- Leave Lobby ----
-async function leaveLobby() {
+function leaveLobby() {
   if (lobbyRef) {
-    // remove listeners (use stored callbacks/refs)
-    if (lobbyValueCallback) {
-      lobbyRef.off('value', lobbyValueCallback);
-      lobbyValueCallback = null;
-    }
-    if (messagesRef && messagesCallback) {
-      messagesRef.off('child_added', messagesCallback);
-      messagesRef = null;
-      messagesCallback = null;
-    }
-
-    // cancel onDisconnect and remove the player node
-    const pRef = lobbyRef.child('players').child(playerName);
-    try { await pRef.onDisconnect().cancel(); } catch(e){ /* ignore */ }
-    try { await pRef.remove(); } catch(e){ /* ignore */ }
+    if (lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+    if (chatUnsub) lobbyRef.off('child_added', chatUnsub);
+    lobbyRef.child('players').child(playerName).remove();
   }
 
   const chatMessages = document.getElementById('chat-messages');
@@ -432,7 +315,6 @@ async function leaveLobby() {
   document.getElementById('game-container-wrapper').style.display = 'none';
   document.getElementById('lobby-container').style.display = 'block';
 
-  // reset local state
   playerName = "";
   lobbyName = "";
   lobbyRef = null;
