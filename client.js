@@ -18,6 +18,7 @@ const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 let playerName = "";
 let lobbyName = "";
 let lobbyRef = null;
+let messagesRef = null;
 let lobbyUnsub = null;
 let chatUnsub = null;
 
@@ -27,17 +28,17 @@ let currentTurn = "";
 let joined = false;
 let selectedCards = new Set();
 
-// ---- Utility ----
-function getNextRank(lastRank) {
-  if (!lastRank) return ranks[0];
-  const idx = ranks.indexOf(lastRank);
-  return ranks[(idx + 1) % ranks.length];
-}
-
+// ---- Utilities ----
 function randomCard() {
   const r = ranks[Math.floor(Math.random() * ranks.length)];
   const s = suits[Math.floor(Math.random() * suits.length)];
   return r + s;
+}
+
+function getNextRank(lastRank) {
+  if (!lastRank) return ranks[0];
+  const idx = ranks.indexOf(lastRank);
+  return ranks[(idx + 1) % ranks.length];
 }
 
 // ---- Join Lobby ----
@@ -46,37 +47,54 @@ async function joinLobby() {
   lobbyName = document.getElementById('lobby-name').value.trim();
 
   if (!playerName || !lobbyName) {
-    alert("Enter both lobby name and player name!");
+    alert("Enter both player name and lobby name!");
     return;
   }
 
   lobbyRef = db.ref('lobbies/' + lobbyName);
+  messagesRef = lobbyRef.child('messages');
 
   try {
-    await lobbyRef.child('testConnection').set({ time: Date.now() });
+    console.log(`Joining lobby "${lobbyName}" as "${playerName}"`);
 
+    // Transaction to initialize lobby safely and add player
+    await lobbyRef.transaction(game => {
+      if (!game) {
+        game = {
+          players: {},
+          pile: [],
+          currentTurn: playerName,
+          winner: null,
+          messages: {}
+        };
+      } else {
+        game.players = game.players || {};
+        game.pile = game.pile || [];
+      }
+
+      // Add player if not exist
+      if (!game.players[playerName]) {
+        playerHand = Array.from({ length: 5 }, () => randomCard());
+        game.players[playerName] = playerHand.slice();
+      } else {
+        playerHand = game.players[playerName].slice();
+      }
+
+      game.currentTurn = game.currentTurn || playerName;
+      return game;
+    });
+
+    joined = true;
+
+    // Swap UI
     document.getElementById('lobby-container').style.display = 'none';
     document.getElementById('game-container-wrapper').style.display = 'block';
 
-    if (!joined) {
-      joined = true;
-      playerHand = Array.from({ length: 5 }, () => randomCard());
-
-      // Add player
-      await lobbyRef.child('players').transaction(players => {
-        players = players || {};
-        if (!players[playerName]) players[playerName] = playerHand.slice();
-        return players;
-      });
-
-      await lobbyRef.child('currentTurn').transaction(ct => ct || playerName);
-    }
-
-    // Remove old listeners
+    // Remove old listeners if any
     if (lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-    if (chatUnsub) lobbyRef.off('child_added', chatUnsub);
+    if (chatUnsub) messagesRef.off('child_added', chatUnsub);
 
-    // Game updates
+    // ---- Listen for game updates ----
     lobbyUnsub = lobbyRef.on('value', snapshot => {
       const game = snapshot.val() || {};
       pile = game.pile || [];
@@ -87,8 +105,8 @@ async function joinLobby() {
       updateUI(game.players || {}, game.winner || null);
     });
 
-    // Chat messages
-    chatUnsub = lobbyRef.child('messages').on('child_added', snap => {
+    // ---- Listen for chat messages ----
+    chatUnsub = messagesRef.on('child_added', snap => {
       const msg = snap.val();
       if (!msg) return;
       const chatMessages = document.getElementById('chat-messages');
@@ -102,60 +120,50 @@ async function joinLobby() {
       }
     });
 
+    console.log("Joined lobby successfully!");
+
   } catch (err) {
-    alert("Firebase write failed: " + err.message);
+    console.error("Error joining lobby:", err);
+    alert("Failed to join lobby: " + err.message);
   }
 }
 
-// ---- Card selection ----
-function toggleCard(index) {
-  if (selectedCards.has(index)) selectedCards.delete(index);
-  else selectedCards.add(index);
-  updateUI();
-}
-
-// ---- Play selected cards ----
+// ---- Play Selected Cards ----
 async function playSelected() {
+  if (!joined) return alert("Not in a lobby!");
   if (currentTurn !== playerName) return alert("Not your turn!");
-  if (selectedCards.size === 0) return alert("Select at least one card!");
+  if (selectedCards.size === 0) return alert("Select cards first!");
 
   const cards = [...selectedCards].map(i => playerHand[i]);
-  const lastDeclared = pile.length ? pile[pile.length - 1].declared : null;
+  const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
   const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
 
   let declaredRank = prompt(
-    `You are playing ${cards.length} card(s). What rank do you want to declare?` +
-    (requiredDeclared ? ` (Must declare: ${requiredDeclared})` : ""),
-    requiredDeclared || cards[0].slice(0, -1)
+    `Playing ${cards.length} card(s). Declare rank:` +
+    (requiredDeclared ? ` (Must declare ${requiredDeclared})` : ""),
+    requiredDeclared || cards[0].slice(0,-1)
   );
-  declaredRank = (declaredRank || requiredDeclared || cards[0].slice(0, -1)).trim();
+
+  declaredRank = (declaredRank || requiredDeclared || cards[0].slice(0,-1)).trim();
 
   if (requiredDeclared && declaredRank !== requiredDeclared) {
-    return alert(`Invalid. You must declare: ${requiredDeclared}`);
+    return alert(`You must declare ${requiredDeclared}!`);
   }
 
   await lobbyRef.transaction(game => {
-    if (!game) return; // FIX: do not return {}
-
-    console.log("Before playSelected tx:", game);
+    if (!game) return; // fail-safe
 
     game.players = game.players || {};
     game.pile = game.pile || [];
-
     if (game.currentTurn !== playerName) return game;
 
     const hand = (game.players[playerName] || []).slice();
-    const newHand = hand.filter((c, i) => !selectedCards.has(i));
+    const newHand = hand.filter((c,i)=>!selectedCards.has(i));
 
-    cards.forEach(card => {
-      game.pile.push({ card, declared: declaredRank, player: playerName });
-    });
+    cards.forEach(c => game.pile.push({ card: c, declared: declaredRank, player: playerName }));
 
     game.players[playerName] = newHand;
-
-    if (newHand.length === 0) {
-      game.winner = playerName;
-    }
+    if (newHand.length === 0) game.winner = playerName;
 
     const allPlayers = Object.keys(game.players);
     if (allPlayers.length > 0) {
@@ -171,9 +179,9 @@ async function playSelected() {
 
 // ---- Draw Card ----
 async function drawCard() {
-  if (!lobbyRef) return alert("Not connected to a lobby.");
+  if (!joined) return;
   const newCard = randomCard();
-  await lobbyRef.child('players').child(playerName).transaction(hand => {
+  await lobbyRef.child('players').child(playerName).transaction(hand=>{
     hand = hand || [];
     hand.push(newCard);
     return hand;
@@ -182,21 +190,19 @@ async function drawCard() {
 
 // ---- Call BS ----
 async function callBS() {
-  if (!lobbyRef) return alert("Not connected.");
-  await lobbyRef.transaction(game => {
-    if (!game || !game.pile || game.pile.length === 0) return game;
+  if (!joined || pile.length===0) return;
+  await lobbyRef.transaction(game=>{
+    if (!game || !game.pile) return game;
 
-    console.log("Before callBS tx:", game);
-
-    const last = game.pile[game.pile.length - 1];
-    const realRank = last.card.slice(0, -1);
-    const pileCards = game.pile.map(p => p.card);
+    const last = game.pile[game.pile.length-1];
+    const realRank = last.card.slice(0,-1);
+    const pileCards = game.pile.map(p=>p.card);
 
     game.players = game.players || {};
     if (realRank === last.declared) {
-      game.players[playerName] = (game.players[playerName] || []).concat(pileCards);
+      game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
     } else {
-      game.players[last.player] = (game.players[last.player] || []).concat(pileCards);
+      game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
     }
 
     game.pile = [];
@@ -205,122 +211,115 @@ async function callBS() {
   });
 }
 
-// ---- Send Chat ----
+// ---- Chat ----
 function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text || !lobbyRef || !playerName) return;
-
-  lobbyRef.child('messages').push({
-    player: playerName,
-    text: text,
-    timestamp: Date.now()
-  }).then(() => { input.value = ''; });
+  if (!text || !joined) return;
+  messagesRef.push({ player: playerName, text, timestamp: Date.now() });
+  input.value = '';
 }
 document.getElementById('chat-send').onclick = sendMessage;
-document.getElementById('chat-input').addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+document.getElementById('chat-input').addEventListener('keypress', e=>{
+  if(e.key==='Enter') sendMessage();
+});
+
+// ---- Card Selection ----
+function toggleCard(idx) {
+  if (selectedCards.has(idx)) selectedCards.delete(idx);
+  else selectedCards.add(idx);
+  updateUI();
+}
 
 // ---- Update UI ----
-function updateUI(playersObj = {}, winner = null) {
-  for (let name in playersObj) {
-    if (!Array.isArray(playersObj[name])) playersObj[name] = [];
-  }
-
-  // Winner banner
-  const banner = document.getElementById('winner-banner');
-  if (winner) {
-    banner.style.display = 'block';
-    banner.innerHTML = `
-      <h2>${winner === playerName ? "🎉 You Win!" : "🏆 " + winner + " Wins!"}</h2>
-      <button onclick="playAgain()">Play Again</button>
-      <button onclick="leaveLobby()">Leave Lobby</button>
-    `;
-  } else {
-    banner.style.display = 'none';
-  }
-
+function updateUI(playersObj={}, winner=null) {
   // Hand
   const container = document.getElementById('game-container');
   container.innerHTML = '';
-  playerHand.forEach((c, i) => {
+  playerHand.forEach((c,i)=>{
     const div = document.createElement('div');
     div.textContent = c;
     div.className = 'card';
-    if (selectedCards.has(i)) div.classList.add('selected');
-    div.onclick = () => toggleCard(i);
+    if(selectedCards.has(i)) div.classList.add('selected');
+    div.onclick = ()=>toggleCard(i);
     container.appendChild(div);
   });
 
   // Pile
   const pileContainer = document.getElementById('pile-container');
   pileContainer.innerHTML = '';
-  pile.forEach(p => {
+  pile.forEach(p=>{
     const div = document.createElement('div');
-    div.textContent = (p.player === playerName) ? `${p.card} (${p.declared})` : `${p.declared} (by ${p.player})`;
-    div.className = 'card';
+    div.textContent = (p.player===playerName)?`${p.card} (${p.declared})`:`${p.declared} (by ${p.player})`;
+    div.className='card';
     pileContainer.appendChild(div);
   });
 
-  // Leaderboard
-  const playersList = document.getElementById('players-list');
-  playersList.innerHTML = '';
-  Object.entries(playersObj).forEach(([name, hand]) => {
-    const li = document.createElement('li');
-    li.textContent = `${name} - ${hand.length} card${hand.length !== 1 ? 's' : ''}`;
-    if (name === currentTurn) li.style.fontWeight = 'bold';
-    if (hand.length === 0) li.style.textDecoration = 'underline';
-    playersList.appendChild(li);
+  // Players list
+  const list = document.getElementById('players-list');
+  list.innerHTML='';
+  Object.entries(playersObj).forEach(([name,hand])=>{
+    const li=document.createElement('li');
+    li.textContent = `${name} - ${hand.length} card${hand.length!==1?'s':''}`;
+    if(name===currentTurn) li.style.fontWeight='bold';
+    if(hand.length===0) li.style.textDecoration='underline';
+    list.appendChild(li);
   });
 
-  // Info
   document.getElementById('game-info').textContent = `Current Turn: ${currentTurn}`;
 
   // Buttons
-  document.getElementById('btn-draw').disabled = (currentTurn !== playerName || winner);
-  document.getElementById('btn-call').disabled = (pile.length === 0 || winner);
-  document.getElementById('btn-play').disabled = (currentTurn !== playerName || winner);
+  document.getElementById('btn-play').disabled = !joined || currentTurn!==playerName || winner;
+  document.getElementById('btn-draw').disabled = !joined || currentTurn!==playerName || winner;
+  document.getElementById('btn-call').disabled = !joined || pile.length===0 || winner;
+
+  // Winner banner
+  const banner=document.getElementById('winner-banner');
+  if(winner){
+    banner.style.display='block';
+    banner.innerHTML=`<h2>${winner===playerName?'🎉 You Win!':'🏆 '+winner+' Wins!'}</h2>
+      <button onclick="playAgain()">Play Again</button>
+      <button onclick="leaveLobby()">Leave Lobby</button>`;
+  } else banner.style.display='none';
 }
 
 // ---- Play Again ----
 async function playAgain() {
-  if (!lobbyRef) return;
-  await lobbyRef.transaction(game => {
-    if (!game) return; // FIX
-
-    console.log("Before playAgain tx:", game);
-
-    const players = game.players || {};
-    for (let name in players) {
-      players[name] = Array.from({ length: 5 }, () => randomCard());
+  if(!joined) return;
+  await lobbyRef.transaction(game=>{
+    if(!game) return;
+    const players = game.players||{};
+    for(let name in players){
+      players[name] = Array.from({length:5}, ()=>randomCard());
     }
     game.players = players;
-    game.pile = [];
-    game.winner = null;
-    game.currentTurn = Object.keys(players)[0] || null;
+    game.pile=[];
+    game.winner=null;
+    game.currentTurn = Object.keys(players)[0]||null;
     return game;
   });
 }
 
 // ---- Leave Lobby ----
-function leaveLobby() {
-  if (lobbyRef) {
-    if (lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-    if (chatUnsub) lobbyRef.off('child_added', chatUnsub);
-    lobbyRef.child('players').child(playerName).remove();
-  }
+async function leaveLobby() {
+  if(!joined) return;
+  try {
+    if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+    if(chatUnsub) messagesRef.off('child_added', chatUnsub);
 
-  const chatMessages = document.getElementById('chat-messages');
-  if (chatMessages) chatMessages.innerHTML = '';
+    await lobbyRef.child('players').child(playerName).remove();
+  } catch(e){ console.warn("Error leaving lobby",e); }
 
-  document.getElementById('game-container-wrapper').style.display = 'none';
-  document.getElementById('lobby-container').style.display = 'block';
-
-  playerName = "";
-  lobbyName = "";
-  lobbyRef = null;
-  playerHand = [];
-  pile = [];
-  currentTurn = "";
-  joined = false;
+  // reset UI
+  document.getElementById('game-container-wrapper').style.display='none';
+  document.getElementById('lobby-container').style.display='block';
+  playerName='';
+  lobbyName='';
+  lobbyRef=null;
+  messagesRef=null;
+  playerHand=[];
+  pile=[];
+  currentTurn='';
   selectedCards.clear();
+  joined=false;
 }
