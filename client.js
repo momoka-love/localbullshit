@@ -33,6 +33,7 @@ function getNextRank(lastRank) {
   if(idx===-1) return null;
   return ranks[(idx+1)%ranks.length];
 }
+function escapeText(text) { return document.createTextNode(text == null ? '' : text); }
 function showBullshitBanner(msg){
   const banner = document.getElementById('bs-banner');
   banner.textContent = msg;
@@ -49,12 +50,10 @@ async function joinLobby(){
   lobbyRef = db.ref('lobbies/'+lobbyName);
 
   try{
-    // Initialize lobby or join
     await lobbyRef.transaction(game=>{
       if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
       game.players = game.players||{};
       if(!game.players[playerName]) game.players[playerName] = Array.from({length:5},()=>randomCard());
-      playerHand = game.players[playerName].slice();
       game.currentTurn = game.currentTurn || playerName;
       return game;
     });
@@ -74,10 +73,10 @@ async function joinLobby(){
       if(game.winner) showBullshitBanner(`${game.winner} wins!`);
     });
 
-    // Chat setup
+    // Chat
     chatRef = lobbyRef.child('chat');
     if(chatUnsub) chatRef.off('child_added', chatUnsub);
-    chatUnsub = chatRef.on('child_added', snapshot => {
+    chatUnsub = chatRef.on('child_added', snapshot=>{
       appendChatMessage(snapshot.val());
     });
 
@@ -94,15 +93,14 @@ function toggleCard(idx){
 // --- Play Selected ---
 async function playSelected() {
   if(!joined || selectedCards.size===0 || currentTurn!==playerName) return;
+  const indices = [...selectedCards].sort((a,b)=>b-a); // descending
 
-  const indices = [...selectedCards].sort((a,b)=>b-a);
-  const played = indices.map(i => playerHand[i]);
-  let lastDeclared = pile.length ? pile[pile.length-1].declared : null;
-  let requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
+  const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
+  const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
 
   let declared = prompt(
     requiredDeclared ? `Declare next rank: ${requiredDeclared}` : `Declare any rank`,
-    requiredDeclared || played[0].slice(0,-1)
+    requiredDeclared || playerHand[indices[0]].slice(0,-1)
   );
   if(!declared) return;
   declared = declared.toUpperCase();
@@ -113,13 +111,15 @@ async function playSelected() {
 
   await lobbyRef.transaction(game=>{
     if(!game || !game.players || game.currentTurn!==playerName) return game;
-    const hand = game.players[playerName].slice();
-    indices.forEach(i => hand.splice(i,1));
-    game.players[playerName] = hand;
-    game.pile = game.pile || [];
-    played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
 
-    if(hand.length===0) game.winner = playerName;
+    const hand = game.players[playerName].slice();
+    const playedCards = indices.map(i=>hand[i]);
+    game.players[playerName] = hand.filter((_,i)=>!indices.includes(i));
+
+    game.pile = game.pile || [];
+    playedCards.forEach(c=>game.pile.push({card:c, declared, player:playerName}));
+
+    if(game.players[playerName].length === 0) game.winner = playerName;
 
     const allPlayers = Object.keys(game.players);
     let idx = allPlayers.indexOf(playerName);
@@ -131,13 +131,12 @@ async function playSelected() {
   selectedCards.clear();
 }
 
-// --- Draw card ---
+// --- Draw Card ---
 async function drawCard() {
   if(!joined || currentTurn!==playerName) return;
-  const newCard = randomCard();
   await lobbyRef.child('players').child(playerName).transaction(hand=>{
     hand = hand||[];
-    hand.push(newCard);
+    hand.push(randomCard());
     return hand;
   });
 }
@@ -193,7 +192,7 @@ async function sendChatMessage(){
   input.value='';
 }
 function appendChatMessage(msg){
-  const container = document.getElementById('chat-messages');
+  const container = document.getElementById('chat-container');
   if(!container) return;
   const line = document.createElement('div');
   line.className='chat-message';
