@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>bullshit!</title>
+  <title>Bullshit!</title>
 
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
@@ -15,17 +15,15 @@
       --accent: #ff84b1;
       --muted: #8f6b83;
       --white: #ffffff;
-      --glass: rgba(255,255,255,0.6);
       --card-shadow: 0 8px 20px rgba(168, 92, 125, 0.12);
-      --soft-radius: 14px;
     }
 
-    html,body{
-      height:100%;
+    html, body {
       margin:0;
-      font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
-      background: linear-gradient(180deg, var(--pink-1) 0%, var(--pink-2) 100%);
-      -webkit-font-smoothing:antialiased;
+      padding:0;
+      height:100%;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(180deg, var(--pink-1), var(--pink-2));
       color:#53324b;
     }
 
@@ -34,7 +32,7 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:32px;
+      padding:20px;
       box-sizing:border-box;
     }
 
@@ -80,7 +78,6 @@
     .logo h1{
       margin:0;
       font-size:20px;
-      letter-spacing:0.4px;
       color:#3a2140;
     }
 
@@ -90,7 +87,6 @@
       color:var(--muted);
     }
 
-    /* Lobby */
     #lobby-container{
       display:flex;
       gap:16px;
@@ -120,7 +116,7 @@
 
     button{
       background: linear-gradient(180deg, #ff79b3, #ff5b98);
-      color:var(--white);
+      color:white;
       border:none;
       padding:10px 14px;
       border-radius:10px;
@@ -136,7 +132,6 @@
       box-shadow:none;
     }
 
-    /* Main board */
     .board{
       display:flex;
       gap:18px;
@@ -145,7 +140,6 @@
       flex-wrap:wrap;
     }
 
-    /* keep right column stacked and compact so it doesn't create large empty bottom space */
     .left, .right{
       background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
       border-radius:14px;
@@ -165,11 +159,8 @@
       display:flex;
       flex-direction:column;
       gap:12px;
-      /* ensure right column doesn't push page too tall; overflow items scroll internally */
-      max-height:62vh;
     }
 
-    /* player's hand grid */
     #game-container{
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
@@ -178,10 +169,9 @@
     }
 
     .card{
-      background:var(--white);
+      background:white;
       border-radius:12px;
       padding:12px;
-      box-sizing:border-box;
       text-align:center;
       font-weight:700;
       font-size:18px;
@@ -216,8 +206,6 @@
       flex-direction:column;
       gap:8px;
       align-items:flex-start;
-      overflow:auto;
-      max-height:28vh;
     }
 
     .pile-card{
@@ -239,8 +227,6 @@
       display:flex;
       flex-direction:column;
       gap:8px;
-      max-height:16vh;
-      overflow:auto;
     }
 
     ul#players-list li{
@@ -259,6 +245,57 @@
       flex-wrap:wrap;
     }
 
+    /* Chat */
+    #chat-container{
+      display:flex;
+      flex-direction:column;
+      height:200px;
+      border-radius:12px;
+      background:rgba(255,255,255,0.6);
+      border:1px solid rgba(83,50,75,0.08);
+      overflow:hidden;
+    }
+
+    #chat-messages{
+      flex:1;
+      padding:10px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size:13px;
+      color:#513144;
+    }
+
+    .chat-message{
+      background:white;
+      padding:6px 10px;
+      border-radius:8px;
+      box-shadow:0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    #chat-input-row{
+      display:flex;
+      border-top:1px solid rgba(83,50,75,0.08);
+    }
+
+    #chat-input-row input{
+      flex:1;
+      border:none;
+      padding:10px;
+      outline:none;
+      background:transparent;
+    }
+
+    #chat-input-row button{
+      padding:0 15px;
+      border:none;
+      background:#ff79b3;
+      color:white;
+      font-weight:600;
+      cursor:pointer;
+    }
+
     #bs-banner{
       position:fixed;
       left:50%;
@@ -274,99 +311,13 @@
       z-index:9999;
     }
 
-    .footer{
-      margin-top:14px;
-      font-size:12px;
-      color:var(--muted);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-
-    /* Chat specific (matching style) */
-    .chat-box{
-      border-radius:12px;
-      padding:10px;
-      min-height:120px;
-      max-height:28vh;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      align-items:flex-start;
-      overflow:auto;
-      background: linear-gradient(180deg,#fff,#fff8fb);
-      border:1px solid rgba(83,50,75,0.06);
-    }
-
-    .chat-line{
-      width:100%;
-      display:flex;
-      gap:6px;
-      align-items:flex-start;
-      font-size:13px;
-    }
-
-    .chat-from{
-      font-weight:700;
-      color:#6a3b52;
-      min-width:60px;
-    }
-
-    .chat-body{
-      color:#513144;
-      font-weight:500;
-      flex:1 1 auto;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-
-    .chat-ts{
-      color:var(--muted);
-      font-size:11px;
-      margin-left:6px;
-      white-space:nowrap;
-    }
-
-    .chat-input-row{
-      display:flex;
-      gap:8px;
-      margin-top:8px;
-      align-items:center;
-    }
-
-    #chat-input{
-      flex:1 1 auto;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(83,50,75,0.06);
-      background:transparent;
-      outline:none;
-      font-size:14px;
-    }
-
-    #btn-send-chat{
-      padding:10px 12px;
-      border-radius:10px;
-      font-weight:600;
-      cursor:pointer;
-      box-shadow: 0 8px 20px rgba(255,105,168,0.08);
-    }
-
     @media (max-width:800px){
       .board{ flex-direction:column; }
-      .right{ width:100%; max-height:none; }
-      <h3 style="margin-top:16px;margin-bottom:8px;">chat</h3>
-<div id="chat-container">
-  <div id="chat-messages"></div>
-  <div id="chat-input-row">
-    <input type="text" id="chat-input" placeholder="type a message..." />
-    <button id="chat-send">send</button>
-  </div>
-</div>
-      .pile-box, .chat-box, ul#players-list { max-height:200px; }
+      .right{ width:100%; }
     }
   </style>
 </head>
+
 <body>
   <div id="bs-banner">bullshit!</div>
 
@@ -378,26 +329,20 @@
           <div class="mark">BS!</div>
           <div>
             <h1>bullshit!</h1>
-            <p>local lobby play (same wi-fi required!)</p>
+            <p>local lobby play</p>
           </div>
         </div>
-
         <div style="display:flex;gap:12px;align-items:center;">
-          <div style="font-size:13px;color:var(--muted)">made by lily</div>
-          <button class="secondary" id="btn-leave" title="Leave lobby (also used in-game)">Leave</button>
+          <button class="secondary" id="btn-leave">Leave</button>
         </div>
       </header>
 
       <!-- LOBBY -->
       <div id="lobby-container">
         <div class="input-row">
-          <input id="player-name" type="text" placeholder="your name (e.g. grace)" />
-          <input id="lobby-name" type="text" placeholder="lobby name (e.g. howqua)" />
+          <input id="player-name" type="text" placeholder="your name" />
+          <input id="lobby-name" type="text" placeholder="lobby name" />
           <button id="btn-join">join lobby</button>
-        </div>
-
-        <div style="color:var(--muted);font-size:13px;">
-          tip: use a short lobby name to share with friends.
         </div>
       </div>
 
@@ -406,21 +351,15 @@
         <div class="board">
           <div class="left">
             <div class="meta">
-              <div style="display:flex;flex-direction:column;">
-                <div id="game-info" style="font-weight:700">current turn: —</div>
-                <div style="font-size:13px;color:var(--muted);margin-top:6px;">click your cards to select, then play.</div>
+              <div>
+                <div id="game-info">current turn: —</div>
               </div>
-
               <div style="text-align:right;">
-                <div style="font-size:13px;color:var(--muted);">player hand</div>
-                <div style="font-weight:700;font-size:18px;" id="player-name-display">—</div>
+                <div>player hand</div>
+                <div id="player-name-display">—</div>
               </div>
             </div>
-
-            <div id="game-container" aria-live="polite">
-              <!-- player's cards inserted here -->
-            </div>
-
+            <div id="game-container" aria-live="polite"></div>
             <div class="controls">
               <button id="btn-play">play selected</button>
               <button id="btn-draw" class="secondary">draw</button>
@@ -429,30 +368,19 @@
           </div>
 
           <div class="right">
-            <h3 style="margin-top:0;margin-bottom:8px;">pile</h3>
-            <div id="pile-container" class="pile-box">
-              <!-- pile items here -->
-            </div>
+            <h3>pile</h3>
+            <div id="pile-container" class="pile-box"></div>
 
-            <h3 style="margin-top:8px;margin-bottom:8px;">players</h3>
-            <ul id="players-list">
-              <!-- players -->
-            </ul>
+            <h3>players</h3>
+            <ul id="players-list"></ul>
 
-            <!-- Chat: added UI -->
-            <h3 style="margin-top:8px;margin-bottom:8px;">chat</h3>
-            <div id="chat-container" class="chat-box" aria-live="polite">
-              <!-- chat messages -->
-            </div>
-
-            <div class="chat-input-row" style="margin-top:8px;">
-              <input id="chat-input" type="text" placeholder="say hi..." />
-              <button id="btn-send-chat">send</button>
-            </div>
-
-            <div class="footer" style="margin-top:10px;">
-              <div style="font-size:12px;">have fun! </div>
-              <div style="font-size:12px;color:var(--muted);">made by lily</div>
+            <h3>chat</h3>
+            <div id="chat-container">
+              <div id="chat-messages"></div>
+              <div id="chat-input-row">
+                <input type="text" id="chat-input" placeholder="type a message..." />
+                <button id="chat-send">send</button>
+              </div>
             </div>
           </div>
         </div>
@@ -461,13 +389,11 @@
     </div>
   </div>
 
-  <!-- Firebase v8 (required by your code using firebase.database()) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  <!-- Game script (your logic integrated) -->
   <script>
-  // ---- Firebase setup ----
   const firebaseConfig = {
     apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
     authDomain: "bullshit-f4f8e.firebaseapp.com",
@@ -480,7 +406,6 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ---- Game variables ----
   const suits = ['♠','♥','♦','♣'];
   const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
@@ -489,31 +414,9 @@
   let selectedCards=new Set();
   let lobbyUnsub=null;
 
-  // ---- Chat variables ----
-  let chatRef = null;
-  let chatUnsub = null;
-
-  // ---- Utils ----
   function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
+  function getNextRank(lastRank){ if(!lastRank) return ranks[0]; return ranks[(ranks.indexOf(lastRank)+1)%ranks.length]; }
 
-  function normalizeRank(r) {
-    if (!r) return null;
-    return r.toString().trim().toUpperCase();
-  }
-
-  // Robust getNextRank: returns null when unknown/no last rank
-  function getNextRank(lastRank) {
-    if (!lastRank) return null;
-    const norm = normalizeRank(lastRank);
-    const idx = ranks.indexOf(norm);
-    if (idx === -1) return null;
-    return ranks[(idx + 1) % ranks.length];
-  }
-
-  // safe text node creation
-  function escapeTextNode(text){ return document.createTextNode(text == null ? '' : text); }
-
-  // ---- Visual Bullshit banner ----
   function showBullshitBanner(msg){
     const banner=document.getElementById('bs-banner');
     banner.textContent=msg;
@@ -521,50 +424,50 @@
     setTimeout(()=>{ banner.style.display='none'; }, 2200);
   }
 
-  // One-time sanitize helper for existing pile entries (safe to call repeatedly)
-  async function sanitizePileOnce() {
-    if(!lobbyRef) return;
-    try {
-      await lobbyRef.child('pile').transaction(pileArr => {
-        if (!pileArr) return pileArr;
-        return pileArr.map(p => {
-          const cardRank = p && p.card ? p.card.slice(0, -1) : null;
-          const declaredRaw = p && p.declared ? p.declared : cardRank;
-          const declared = normalizeRank(declaredRaw) || cardRank;
-          return {
-            card: p.card,
-            declared: declared,
-            player: p.player
-          };
-        });
-      });
-    } catch (e) {
-      console.warn("sanitizePileOnce failed:", e);
-    }
+  // ---- Chat ----
+  const chatRef = () => lobbyRef ? lobbyRef.child('chat') : null;
+  function addChatMessage(msg){
+    const container=document.getElementById('chat-messages');
+    const div=document.createElement('div');
+    div.className='chat-message';
+    div.innerHTML=`<strong>${msg.player}:</strong> ${msg.text}`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
   }
+  function initChat(){
+    if(!lobbyRef) return;
+    const ref = chatRef();
+    ref.on('child_added', snapshot => {
+      const msg = snapshot.val();
+      addChatMessage(msg);
+    });
+  }
+  function sendMessage(){
+    const input=document.getElementById('chat-input');
+    const text=input.value.trim();
+    if(!text || !lobbyRef) return;
+    chatRef().push({player:playerName, text});
+    input.value='';
+  }
+  document.getElementById('chat-send').onclick = sendMessage;
+  document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
 
-  // ---- Join Lobby ----
-  async function joinLobby(){
+  // ---- Game Logic ----
+  function joinLobby(){
     playerName=document.getElementById('player-name').value.trim();
     lobbyName=document.getElementById('lobby-name').value.trim();
     if(!playerName||!lobbyName){ alert("Enter name and lobby"); return; }
 
     lobbyRef=db.ref('lobbies/'+lobbyName);
 
-    try{
-      await lobbyRef.transaction(game=>{
-        if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
-        game.players=game.players||{};
-        if(!game.players[playerName]) game.players[playerName]=Array.from({length:5},()=>randomCard());
-        playerHand=game.players[playerName].slice();
-        game.currentTurn=game.currentTurn||playerName;
-        return game;
-      });
-
-      // sanitize existing pile entries (non-destructive)
-      await sanitizePileOnce();
-
-      // Update UI state
+    lobbyRef.transaction(game=>{
+      if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
+      game.players=game.players||{};
+      if(!game.players[playerName]) game.players[playerName]=Array.from({length:5},()=>randomCard());
+      playerHand=game.players[playerName].slice();
+      game.currentTurn=game.currentTurn||playerName;
+      return game;
+    }).then(()=>{
       joined=true;
       document.getElementById('lobby-container').style.display='none';
       document.getElementById('game-container-wrapper').style.display='block';
@@ -575,231 +478,26 @@
         const game=snapshot.val()||{};
         pile=game.pile||[];
         currentTurn=game.currentTurn||"";
-        if(game.players&&game.players[playerName]) playerHand=game.players[playerName].slice();
+        if(game.players && game.players[playerName]) playerHand=game.players[playerName].slice();
         updateUI(game.players||{}, game.winner||null);
         if(game.winner) showBullshitBanner(`${game.winner} wins!`);
       });
 
-      // --- Chat setup ---
-      chatRef = lobbyRef.child('chat');
-      // initial load
-      chatRef.once('value', snap => {
-        const data = snap.val() || {};
-        const msgs = Object.values(data);
-        const container = document.getElementById('chat-container');
-        container.innerHTML = '';
-        msgs.forEach(m => appendChatMessage(m));
-      });
-
-      // live listener for new messages
-      if(chatUnsub) chatRef.off('child_added', chatUnsub);
-      chatUnsub = chatRef.on('child_added', snapshot => {
-        const msg = snapshot.val();
-        appendChatMessage(msg);
-      });
-
-      updateChatControls();
-
-    }catch(err){ console.error(err); alert("failed to join: "+err.message);}
-  }
-
-  // ---- Toggle Card ----
-  function toggleCard(idx){
-    if(selectedCards.has(idx)) selectedCards.delete(idx);
-    else selectedCards.add(idx);
-    updateUI();
-  }
-
-  // ---- Play Selected ----
-  async function playSelected(){
-    if(!joined||selectedCards.size===0||currentTurn!==playerName) return;
-    const indices=[...selectedCards].sort((a,b)=>a-b);
-    const cardsPreview=indices.map(i=>playerHand[i]);
-
-    // Robust extraction of last declared rank
-    const lastPileItem = pile.length ? pile[pile.length - 1] : null;
-    let lastDeclaredRaw = null;
-    if (lastPileItem) {
-      lastDeclaredRaw = lastPileItem.declared || (lastPileItem.card && lastPileItem.card.slice(0,-1));
-    }
-    let lastDeclared = lastDeclaredRaw ? normalizeRank(lastDeclaredRaw) : null;
-    if (lastDeclared && !ranks.includes(lastDeclared)) lastDeclared = null;
-
-    const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
-
-    // Prompt player
-    let declared = prompt(
-      requiredDeclared 
-        ? `You must declare the next rank: ${requiredDeclared}` 
-        : `Declare any rank to start the sequence`,
-      requiredDeclared || cardsPreview[0].slice(0,-1)
-    );
-    if(!declared) return;
-    declared = normalizeRank(declared);
-
-    // Validate input
-    if(!ranks.includes(declared)){
-      alert("Invalid rank! Use 2-10, J, Q, K, A");
-      return;
-    }
-
-    // Enforce sequence only if requiredDeclared exists (not first move)
-    if(requiredDeclared && declared !== requiredDeclared){
-      alert(`You must declare the next rank: ${requiredDeclared}`);
-      return;
-    }
-
-    // Firebase transaction
-    await lobbyRef.transaction(game=>{
-      if(!game) return game;
-      if(game.currentTurn !== playerName) return game;
-
-      const hand = (game.players && game.players[playerName]) ? game.players[playerName].slice() : [];
-      if(indices.some(i=>i<0 || i>=hand.length)) return game;
-
-      const played = indices.map(i => hand[i]);
-      game.players[playerName] = hand.filter((_,i)=>!indices.includes(i));
-
-      game.pile = game.pile || [];
-      played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
-
-      if(game.players[playerName].length === 0) game.winner = playerName;
-
-      const allPlayers = Object.keys(game.players).sort();
-      if(allPlayers.length > 0){
-        let idx = allPlayers.indexOf(game.currentTurn);
-        if(idx === -1) idx = 0;
-        game.currentTurn = allPlayers[(idx+1) % allPlayers.length];
-      } else game.currentTurn = null;
-
-      return game;
+      initChat();
     });
-
-    selectedCards.clear();
   }
 
-  // ---- Draw Card ----
-  async function drawCard(){
-    if(!joined||currentTurn!==playerName) return;
-    const newCard=randomCard();
-    await lobbyRef.child('players').child(playerName).transaction(hand=>{ hand=hand||[]; hand.push(newCard); return hand; });
-  }
-
-  // ---- Call Bullshit ----
-  async function callBS(){
-    if(!joined||pile.length===0) return;
-    await lobbyRef.transaction(game=>{
-      if(!game||!game.pile) return game;
-      const last=game.pile[game.pile.length-1];
-      const pileCards=game.pile.map(p=>p.card);
-      game.players=game.players||{};
-      const lastCardRank = last.card ? last.card.slice(0,-1).toUpperCase().trim() : null;
-      const declaredRank = last.declared ? last.declared.toString().trim().toUpperCase() : null;
-      if(lastCardRank === declaredRank)
-        game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
-      else
-        game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
-      game.pile=[];
-      game.currentTurn=playerName;
-      return game;
-    });
-    showBullshitBanner("bullshit!");
-  }
-
-  // ---- Leave Lobby ----
-  async function leaveLobby(){
-    if(!joined) return;
-    await lobbyRef.child('players').child(playerName).remove();
-
-    // cleanup chat listener
-    if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
-    chatUnsub = null;
-    chatRef = null;
-
-    joined=false;
-    playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
-    document.getElementById('game-container-wrapper').style.display='none';
-    document.getElementById('lobby-container').style.display='flex';
-    document.getElementById('player-name-display').textContent='—';
-    if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-    lobbyUnsub = null;
-    updateChatControls();
-  }
-
-  // ---- Chat: append message to UI ----
-  function appendChatMessage(msg){
-    if(!msg) return;
-    const container = document.getElementById('chat-container');
-    if(!container) return;
-
-    const line = document.createElement('div');
-    line.className = 'chat-line';
-
-    const who = document.createElement('div');
-    who.className = 'chat-from';
-    who.appendChild(escapeTextNode(msg.from || 'anon'));
-
-    const body = document.createElement('div');
-    body.className = 'chat-body';
-    body.appendChild(escapeTextNode(msg.text || ''));
-
-    const t = document.createElement('div');
-    t.className = 'chat-ts';
-    const dt = msg.ts ? new Date(msg.ts) : new Date();
-    t.appendChild(escapeTextNode(dt.toLocaleTimeString()));
-
-    line.appendChild(who);
-    line.appendChild(body);
-    line.appendChild(t);
-
-    container.appendChild(line);
-    container.scrollTop = container.scrollHeight;
-  }
-
-  // ---- Chat: send message ----
-  async function sendChatMessage(){
-    if(!joined || !lobbyRef) return;
-    const input = document.getElementById('chat-input');
-    if(!input) return;
-    const text = input.value.trim();
-    if(!text) return;
-    const msg = { from: playerName || 'anon', text, ts: Date.now() };
-    try {
-      await lobbyRef.child('chat').push(msg);
-      input.value = '';
-    } catch(err) {
-      console.error("failed sending chat:", err);
-    }
-  }
-
-  // enable/disable chat controls
-  function updateChatControls(){
-    const btn = document.getElementById('btn-send-chat');
-    const input = document.getElementById('chat-input');
-    if(!btn || !input) return;
-    btn.disabled = !joined;
-    input.disabled = !joined;
-    if(!joined){
-      const container = document.getElementById('chat-container');
-      if(container) container.innerHTML = '';
-    }
-  }
-
-  // ---- Update UI ----
   function updateUI(players={}, winner=null){
     const container=document.getElementById('game-container');
     container.innerHTML='';
-
-    // player's hand
     playerHand.forEach((c,i)=>{
       const div=document.createElement('div');
       div.textContent=c; div.className='card';
       if(selectedCards.has(i)) div.classList.add('selected');
-      div.onclick=()=>toggleCard(i);
+      div.onclick=()=>{ if(selectedCards.has(i)) selectedCards.delete(i); else selectedCards.add(i); updateUI(); };
       container.appendChild(div);
     });
 
-    // pile (show newest at top)
     const pileContainer=document.getElementById('pile-container');
     pileContainer.innerHTML='';
     pile.slice().reverse().forEach(p=>{
@@ -809,7 +507,6 @@
       pileContainer.appendChild(div);
     });
 
-    // players list
     const list=document.getElementById('players-list');
     list.innerHTML='';
     Object.entries(players).forEach(([name,hand])=>{
@@ -821,27 +518,12 @@
     });
 
     document.getElementById('game-info').textContent=`Current Turn: ${currentTurn || '—'}`;
-
     document.getElementById('btn-play').disabled=!joined||currentTurn!==playerName||winner;
     document.getElementById('btn-draw').disabled=!joined||currentTurn!==playerName||winner;
     document.getElementById('btn-bullshit').disabled=!joined||pile.length===0||winner;
-    updateChatControls();
   }
 
-  // ---- Event listeners ----
-  document.getElementById('btn-join').onclick=joinLobby;
-  document.getElementById('btn-play').onclick=playSelected;
-  document.getElementById('btn-draw').onclick=drawCard;
-  document.getElementById('btn-bullshit').onclick=callBS;
-  document.getElementById('btn-leave').onclick=leaveLobby;
-
-  // chat listeners
-  document.getElementById('btn-send-chat').onclick = sendChatMessage;
-  document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendChatMessage(); });
-
-  // small UX: press Enter in lobby inputs to join
-  document.getElementById('lobby-name').addEventListener('keydown', e => { if(e.key === 'Enter') joinLobby(); });
-  document.getElementById('player-name').addEventListener('keydown', e => { if(e.key === 'Enter') joinLobby(); });
+  document.getElementById('btn-join').onclick = joinLobby;
 
   </script>
 </body>
