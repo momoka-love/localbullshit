@@ -1,4 +1,4 @@
-// client.js
+// client.js (patched)
 const firebaseConfig = {
   apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
   authDomain: "bullshit-f4f8e.firebaseapp.com",
@@ -10,6 +10,19 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// helpful debug logging for Firebase
+firebase.database.enableLogging(true);
+
+// Use RTDB emulator when running locally (change port if your emulator uses different port)
+if (location.hostname === "localhost") {
+  try {
+    db.useEmulator("localhost", 9000);
+    console.info("Using RTDB emulator at localhost:9000");
+  } catch (e) {
+    console.warn("Could not use emulator:", e);
+  }
+}
 
 // --- Game variables ---
 const suits = ['♠','♥','♦','♣'];
@@ -34,6 +47,7 @@ function getNextRank(lastRank){
 }
 function showBullshitBanner(msg){
   const banner = document.getElementById('bs-banner');
+  if(!banner) return;
   banner.textContent = msg;
   banner.style.display = 'block';
   setTimeout(()=>{ banner.style.display='none'; }, 2000);
@@ -51,7 +65,7 @@ async function joinLobby(){
     if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
     game.players = game.players || {};
     if(!game.players[playerName]) game.players[playerName] = Array.from({length:5},()=>randomCard());
-    playerHand = game.players[playerName].slice();
+    // NOTE: we set the client-side playerHand below from snapshot; don't rely on transaction side-effects here
     game.currentTurn = game.currentTurn || playerName;
     return game;
   });
@@ -86,7 +100,10 @@ function toggleCard(idx){
 
 // --- Play Selected ---
 async function playSelected(){
-  if(!joined || selectedCards.size===0 || currentTurn!==playerName) return;
+  console.log('playSelected called', {joined, selectedCount: selectedCards.size, currentTurn, playerName});
+  if(!joined){ console.warn('Not joined'); return; }
+  if(selectedCards.size===0){ console.warn('No cards selected'); return; }
+  if(currentTurn!==playerName){ console.warn('Not your turn'); return; }
 
   const indices = [...selectedCards].sort((a,b)=>b-a); // descending
   const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
@@ -94,7 +111,7 @@ async function playSelected(){
 
   let declared = prompt(
     requiredDeclared ? `Declare next rank: ${requiredDeclared}` : `Declare any rank`,
-    requiredDeclared || playerHand[indices[0]].slice(0,-1)
+    requiredDeclared || (playerHand[indices[0]] ? playerHand[indices[0]].slice(0,-1) : '')
   );
   if(!declared) return;
   declared = declared.toUpperCase();
@@ -103,71 +120,86 @@ async function playSelected(){
     return;
   }
 
-  await lobbyRef.transaction(game=>{
-    if(!game || !game.players || game.currentTurn!==playerName) return game;
-    const hand = game.players[playerName];
+  try {
+    await lobbyRef.transaction(game=>{
+      if(!game || !game.players || game.currentTurn!==playerName) return game;
+      const hand = game.players[playerName];
 
-    const played = [];
-    for(const i of indices){
-      if(i>=0 && i<hand.length){
-        played.push(hand[i]);
-        hand.splice(i,1); // remove card
+      const played = [];
+      for(const i of indices){
+        if(i>=0 && i<hand.length){
+          played.push(hand[i]);
+          hand.splice(i,1); // remove card
+        }
       }
-    }
 
-    game.pile = game.pile || [];
-    played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
+      game.pile = game.pile || [];
+      played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
 
-    if(hand.length===0) game.winner = playerName;
+      if(hand.length===0) game.winner = playerName;
 
-    // Move turn to next player
-    const allPlayers = Object.keys(game.players).filter(p=>game.players[p].length>0);
-    if(allPlayers.length>0){
-      let idx = allPlayers.indexOf(playerName);
-      game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
-    } else game.currentTurn = null;
+      // Move turn to next player
+      const allPlayers = Object.keys(game.players).filter(p=>game.players[p].length>0);
+      if(allPlayers.length>0){
+        let idx = allPlayers.indexOf(playerName);
+        game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
+      } else game.currentTurn = null;
 
-    return game;
-  });
+      return game;
+    });
+  } catch(e){
+    console.error('playSelected transaction failed', e);
+  }
 
   selectedCards.clear();
 }
 
 // --- Draw ---
 async function drawCard(){
-  if(!joined || currentTurn!==playerName) return;
+  console.log('drawCard called', {joined, currentTurn, playerName});
+  if(!joined){ console.warn('Not joined'); return; }
+  if(currentTurn!==playerName){ console.warn('Not your turn'); return; }
   const newCard = randomCard();
-  await lobbyRef.child('players').child(playerName).transaction(hand=>{
-    hand = hand||[];
-    hand.push(newCard);
-    return hand;
-  });
+  try {
+    await lobbyRef.child('players').child(playerName).transaction(hand=>{
+      hand = hand||[];
+      hand.push(newCard);
+      return hand;
+    });
+  } catch(e){
+    console.error('drawCard transaction failed', e);
+  }
 }
 
 // --- Call Bullshit ---
 async function callBS(){
-  if(!joined || pile.length===0) return;
-  await lobbyRef.transaction(game=>{
-    if(!game || !game.pile || !game.players) return game;
-    const last = game.pile[game.pile.length-1];
-    const pileCards = game.pile.map(p=>p.card);
+  console.log('callBS called', {joined, pileLength: pile.length});
+  if(!joined || pile.length===0) { console.warn('Cannot call BS - either not joined or pile empty'); return; }
+  try {
+    await lobbyRef.transaction(game=>{
+      if(!game || !game.pile || !game.players) return game;
+      const last = game.pile[game.pile.length-1];
+      const pileCards = game.pile.map(p=>p.card);
 
-    const lastRank = last.card.slice(0,-1).toUpperCase();
-    const declared = last.declared.toUpperCase();
+      const lastRank = last.card.slice(0,-1).toUpperCase();
+      const declared = last.declared.toUpperCase();
 
-    if(lastRank===declared){
-      // caller is wrong
-      game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
-    } else {
-      // last player lied
-      game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
-    }
+      if(lastRank===declared){
+        // caller is wrong
+        game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
+      } else {
+        // last player lied
+        game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
+      }
 
-    game.pile = [];
-    game.currentTurn = playerName;
-    return game;
-  });
-  showBullshitBanner("bullshit!");
+      game.pile = [];
+      game.currentTurn = playerName;
+      return game;
+    });
+    showBullshitBanner("bullshit!");
+  } catch(e){
+    console.error('callBS transaction failed', e);
+  }
 }
 
 // --- Leave Lobby ---
@@ -206,52 +238,68 @@ function appendChatMessage(msg){
 // --- Update UI ---
 function updateUI(players={}, winner=null){
   const container = document.getElementById('game-container');
-  container.innerHTML='';
-  playerHand.forEach((c,i)=>{
-    const div = document.createElement('div');
-    div.textContent=c;
-    div.className='card';
-    if(selectedCards.has(i)) div.classList.add('selected');
-    div.onclick = ()=>toggleCard(i);
-    container.appendChild(div);
-  });
+  if(container) {
+    container.innerHTML='';
+    playerHand.forEach((c,i)=>{
+      const div = document.createElement('div');
+      div.textContent=c;
+      div.className='card';
+      if(selectedCards.has(i)) div.classList.add('selected');
+      div.onclick = ()=>toggleCard(i);
+      container.appendChild(div);
+    });
+  }
 
   const pileContainer = document.getElementById('pile-container');
-  pileContainer.innerHTML='';
-  pile.forEach(p=>{
-    const div = document.createElement('div');
-    div.textContent = (p.player===playerName) ? `${p.card} (${p.declared})` : `${p.declared} (by ${p.player})`;
-    div.className='pile-card';
-    pileContainer.appendChild(div);
-  });
+  if(pileContainer){
+    pileContainer.innerHTML='';
+    pile.forEach(p=>{
+      const div = document.createElement('div');
+      div.textContent = (p.player===playerName) ? `${p.card} (${p.declared})` : `${p.declared} (by ${p.player})`;
+      div.className='pile-card';
+      pileContainer.appendChild(div);
+    });
+  }
 
   const list = document.getElementById('players-list');
-  list.innerHTML='';
-  Object.entries(players).forEach(([name,hand])=>{
-    const li = document.createElement('li');
-    li.textContent = `${name} - ${hand.length} card${hand.length!==1?'s':''}`;
-    if(name===currentTurn) li.style.fontWeight='bold';
-    if(hand.length===0) li.style.textDecoration='underline';
-    list.appendChild(li);
-  });
+  if(list){
+    list.innerHTML='';
+    Object.entries(players).forEach(([name,hand])=>{
+      const li = document.createElement('li');
+      li.textContent = `${name} - ${hand.length} card${hand.length!==1?'s':''}`;
+      if(name===currentTurn) li.style.fontWeight='bold';
+      if(hand.length===0) li.style.textDecoration='underline';
+      list.appendChild(li);
+    });
+  }
 
-  document.getElementById('game-info').textContent = `Current Turn: ${currentTurn}`;
-  document.getElementById('btn-play').disabled = !joined || currentTurn!==playerName || winner;
-  document.getElementById('btn-draw').disabled = !joined || currentTurn!==playerName || winner;
-  document.getElementById('btn-bullshit').disabled = !joined || pile.length===0 || winner;
+  if(document.getElementById('game-info')) {
+    document.getElementById('game-info').textContent = `Current Turn: ${currentTurn}`;
+  }
+  const btnPlay = document.getElementById('btn-play');
+  const btnDraw = document.getElementById('btn-draw');
+  const btnBS = document.getElementById('btn-bullshit');
+  if(btnPlay) btnPlay.disabled = !joined || currentTurn!==playerName || !!winner;
+  if(btnDraw) btnDraw.disabled = !joined || currentTurn!==playerName || !!winner;
+  if(btnBS) btnBS.disabled = !joined || pile.length===0 || !!winner;
+
+  // chat controls
   const btn = document.getElementById('chat-send');
   const input = document.getElementById('chat-input');
   if(btn && input){ btn.disabled = !joined; input.disabled = !joined; }
 }
 
-// --- Event listeners ---
-document.getElementById('btn-join').onclick = joinLobby;
-document.getElementById('btn-play').onclick = playSelected;
-document.getElementById('btn-draw').onclick = drawCard;
-document.getElementById('btn-bullshit').onclick = callBS;
-document.getElementById('btn-leave').onclick = leaveLobby;
-document.getElementById('chat-send').onclick = sendChatMessage;
-document.getElementById('chat-input').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChatMessage(); });
+// --- Event listeners attached after DOM ready ---
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('btn-join').onclick = joinLobby;
+  document.getElementById('btn-play').onclick = playSelected;
+  document.getElementById('btn-draw').onclick = drawCard;
+  document.getElementById('btn-bullshit').onclick = callBS;
+  document.getElementById('btn-leave').onclick = leaveLobby;
+  document.getElementById('chat-send').onclick = sendChatMessage;
+  const chatInput = document.getElementById('chat-input');
+  if(chatInput) chatInput.addEventListener('keydown', e=>{ if(e.key==='Enter') sendChatMessage(); });
 
-// --- Initialize UI ---
-updateUI();
+  // initial UI render (safe even if DOM not fully populated earlier)
+  updateUI();
+});
