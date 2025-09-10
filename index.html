@@ -1,386 +1,225 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>bullshit!</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>bullshit!</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink-1: #fff0f6;
+    --pink-2: #ffd6e7;
+    --accent: #ff84b1;
+    --muted: #8f6b83;
+    --white: #ffffff;
+    --card-shadow: 0 8px 20px rgba(168, 92, 125, 0.12);
+  }
 
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  html, body {
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family: "Poppins", sans-serif;
+    background: linear-gradient(180deg, var(--pink-1), var(--pink-2));
+    color:#53324b;
+  }
 
-  <style>
-    :root{
-      --pink-1: #fff0f6;
-      --pink-2: #ffd6e7;
-      --accent: #ff84b1;
-      --muted: #8f6b83;
-      --white: #ffffff;
-      --card-shadow: 0 8px 20px rgba(168, 92, 125, 0.12);
-    }
+  .app {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    box-sizing:border-box;
+  }
 
-    html, body {
-      margin:0;
-      padding:0;
-      height:100%;
-      font-family: "Poppins", sans-serif;
-      background: linear-gradient(180deg, var(--pink-1), var(--pink-2));
-      color:#53324b;
-    }
+  .card-shell{
+    width:100%;
+    max-width:1100px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.95));
+    border-radius:20px;
+    box-shadow: 0 12px 36px rgba(138,74,102,0.12);
+    padding:22px;
+    box-sizing:border-box;
+    backdrop-filter: blur(6px);
+  }
 
-    .app {
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      box-sizing:border-box;
-    }
+  header.app-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:18px;
+  }
 
-    .card-shell{
-      width:100%;
-      max-width:1100px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.95));
-      border-radius:20px;
-      box-shadow: 0 12px 36px rgba(138,74,102,0.12);
-      padding:22px;
-      box-sizing:border-box;
-      backdrop-filter: blur(6px);
-    }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo .mark{
+    width:56px; height:56px;
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; color:var(--white);
+    background: linear-gradient(135deg, #ff9cc7, #ff69a8);
+    box-shadow: 0 6px 18px rgba(255,105,168,0.2);
+    font-size:20px;
+  }
+  .logo h1{ margin:0; font-size:20px; color:#3a2140; }
+  .logo p{ margin:0; font-size:12px; color:var(--muted); }
 
-    header.app-header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:18px;
-    }
+  #lobby-container{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+  .input-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  input[type="text"]{
+    border:1px solid rgba(83,50,75,0.08);
+    padding:12px 14px; border-radius:10px; font-size:14px; width:200px;
+    background:transparent; outline:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);
+  }
 
-    .logo {
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
+  button{
+    background: linear-gradient(180deg, #ff79b3, #ff5b98);
+    color:white; border:none; padding:10px 14px; border-radius:10px;
+    font-weight:600; cursor:pointer;
+    box-shadow: 0 8px 20px rgba(255,105,168,0.12);
+  }
+  button.secondary{ background:transparent; color:#6a3b52; border:1px solid rgba(106,59,82,0.08); box-shadow:none; }
 
-    .logo .mark{
-      width:56px;
-      height:56px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:700;
-      color:var(--white);
-      background: linear-gradient(135deg, #ff9cc7, #ff69a8);
-      box-shadow: 0 6px 18px rgba(255,105,168,0.2);
-      font-size:20px;
-    }
+  .board{
+    display:flex;
+    gap:18px;
+    align-items:flex-start;
+    justify-content:space-between;
+    flex-wrap:wrap;
+  }
 
-    .logo h1{
-      margin:0;
-      font-size:20px;
-      color:#3a2140;
-    }
+  .left{
+    flex:1 1 60%;
+    min-width:280px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
+    border-radius:14px;
+    padding:16px;
+    box-shadow: var(--card-shadow);
+  }
 
-    .logo p{
-      margin:0;
-      font-size:12px;
-      color:var(--muted);
-    }
+  #game-container{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap:12px;
+    align-items:start;
+  }
 
-    #lobby-container{
-      display:flex;
-      gap:16px;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:18px;
-      flex-wrap:wrap;
-    }
+  .card{
+    background:white;
+    border-radius:12px;
+    padding:12px;
+    text-align:center;
+    font-weight:700;
+    font-size:18px;
+    color:#5b2a3f;
+    border:1px solid rgba(83,50,75,0.06);
+    box-shadow: 0 10px 26px rgba(153,86,120,0.08);
+    cursor:pointer;
+    user-select:none;
+    transition:transform .14s ease, box-shadow .14s ease, background .14s ease;
+  }
+  .card.selected{ transform:translateY(-8px) scale(1.04); box-shadow:0 18px 36px rgba(168,92,125,0.18); background:linear-gradient(180deg,#fff #fff6fb); border:1px solid rgba(255,105,168,0.22); }
 
-    .input-row{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
+  .controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
 
-    input[type="text"]{
-      border:1px solid rgba(83,50,75,0.08);
-      padding:12px 14px;
-      border-radius:10px;
-      font-size:14px;
-      width:200px;
-      background:transparent;
-      outline:none;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);
-    }
+  .right{
+    width:300px; min-width:260px;
+    display:flex; flex-direction:column; gap:12px;
+    max-height:80vh;
+  }
 
-    button{
-      background: linear-gradient(180deg, #ff79b3, #ff5b98);
-      color:white;
-      border:none;
-      padding:10px 14px;
-      border-radius:10px;
-      font-weight:600;
-      cursor:pointer;
-      box-shadow: 0 8px 20px rgba(255,105,168,0.12);
-    }
+  /* Top right: pile + players */
+  .top-right { display:flex; gap:12px; flex:0 0 auto; }
+  .pile-section, .players-section { flex:1; display:flex; flex-direction:column; gap:4px; }
+  #pile-container, #players-list { overflow-y:auto; max-height:150px; padding:8px; border-radius:8px; background:#fdf0f6; }
+  #players-list{ list-style:none; margin:0; padding:0; }
 
-    button.secondary{
-      background:transparent;
-      color:#6a3b52;
-      border:1px solid rgba(106,59,82,0.08);
-      box-shadow:none;
-    }
+  /* Chat */
+  .chat-section { flex:1 1 auto; display:flex; flex-direction:column; min-height:150px; }
+  #chat-container{ flex:1 1 auto; display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(83,50,75,0.08); border-radius:12px; }
+  #chat-messages{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:5px; font-size:13px; color:#513144; }
+  .chat-message{ background:white; padding:6px 10px; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+  #chat-input-row{ display:flex; border-top:1px solid rgba(83,50,75,0.08); }
+  #chat-input-row input{ flex:1; border:none; outline:none; background:transparent; padding:10px; }
+  #chat-input-row button{ padding:0 15px; border:none; background:#ff79b3; color:white; font-weight:600; cursor:pointer; }
 
-    .board{
-      display:flex;
-      gap:18px;
-      align-items:flex-start;
-      justify-content:space-between;
-      flex-wrap:wrap;
-    }
+  #bs-banner{ position:fixed; left:50%; transform:translateX(-50%); top:20px; background: linear-gradient(90deg,#ff89bb,#ff5aa0); color:white; padding:10px 18px; border-radius:20px; font-weight:700; display:none; box-shadow: 0 10px 30px rgba(255,90,140,0.18); z-index:9999; }
 
-    .left, .right{
-      background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
-      border-radius:14px;
-      padding:16px;
-      box-sizing:border-box;
-      box-shadow: var(--card-shadow);
-    }
-
-    .left{
-      flex:1 1 60%;
-      min-width:280px;
-    }
-
-    .right{
-      width:300px;
-      min-width:260px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      max-height:80vh; /* constrain panel height */
-    }
-
-    #game-container{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
-      gap:12px;
-      align-items:start;
-    }
-
-    .card{
-      background:white;
-      border-radius:12px;
-      padding:12px;
-      text-align:center;
-      font-weight:700;
-      font-size:18px;
-      color:#5b2a3f;
-      border:1px solid rgba(83,50,75,0.06);
-      box-shadow: 0 10px 26px rgba(153,86,120,0.08);
-      cursor:pointer;
-      user-select:none;
-      transition:transform .14s ease, box-shadow .14s ease, background .14s ease;
-    }
-
-    .card.selected{
-      transform:translateY(-8px) scale(1.04);
-      box-shadow: 0 18px 36px rgba(168,92,125,0.18);
-      background: linear-gradient(180deg,#fff #fff6fb);
-      border:1px solid rgba(255,105,168,0.22);
-    }
-
-    .meta{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:12px;
-    }
-
-    .pile-box{
-      border-radius:12px;
-      padding:12px;
-      min-height:92px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      align-items:flex-start;
-      overflow-y:auto;
-      max-height:120px; /* scrollable pile */
-    }
-
-    .pile-card{
-      background: linear-gradient(180deg,#fff,#fff8f9);
-      padding:8px 10px;
-      border-radius:10px;
-      width:100%;
-      box-sizing:border-box;
-      font-weight:600;
-      color:#6a3b52;
-      border:1px solid rgba(83,50,75,0.06);
-      font-size:13px;
-    }
-
-    ul#players-list{
-      list-style:none;
-      padding:0;
-      margin:0;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      overflow-y:auto;
-      max-height:120px; /* scrollable player list */
-    }
-
-    ul#players-list li{
-      padding:8px 10px;
-      background:rgba(255,255,255,0.6);
-      border-radius:8px;
-      border:1px solid rgba(83,50,75,0.04);
-      font-weight:500;
-      color:#513144;
-    }
-
-    .controls{
-      display:flex;
-      gap:8px;
-      margin-top:12px;
-      flex-wrap:wrap;
-    }
-
-    /* Chat */
-    #chat-container{
-      display:flex;
-      flex-direction:column;
-      flex:1 1 auto;
-      border-radius:12px;
-      background:rgba(255,255,255,0.6);
-      border:1px solid rgba(83,50,75,0.08);
-      overflow:hidden;
-      min-height:120px;
-    }
-
-    #chat-messages{
-      flex:1;
-      padding:10px;
-      overflow-y:auto;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      font-size:13px;
-      color:#513144;
-    }
-
-    .chat-message{
-      background:white;
-      padding:6px 10px;
-      border-radius:8px;
-      box-shadow:0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    #chat-input-row{
-      display:flex;
-      border-top:1px solid rgba(83,50,75,0.08);
-    }
-
-    #chat-input-row input{
-      flex:1;
-      border:none;
-      padding:10px;
-      outline:none;
-      background:transparent;
-    }
-
-    #chat-input-row button{
-      padding:0 15px;
-      border:none;
-      background:#ff79b3;
-      color:white;
-      font-weight:600;
-      cursor:pointer;
-    }
-
-    #bs-banner{
-      position:fixed;
-      left:50%;
-      transform:translateX(-50%);
-      top:20px;
-      background: linear-gradient(90deg,#ff89bb,#ff5aa0);
-      color:white;
-      padding:10px 18px;
-      border-radius:20px;
-      font-weight:700;
-      display:none;
-      box-shadow: 0 10px 30px rgba(255,90,140,0.18);
-      z-index:9999;
-    }
-
-    @media (max-width:800px){
-      .board{ flex-direction:column; }
-      .right{ width:100%; max-height:none; }
-    }
-  </style>
+  @media(max-width:800px){
+    .board{ flex-direction:column; }
+    .right{ width:100%; max-height:none; }
+    .top-right{ flex-direction:column; }
+  }
+</style>
 </head>
-
 <body>
-  <div id="bs-banner">bullshit!</div>
-
-  <div class="app">
-    <div class="card-shell">
-
-      <header class="app-header">
-        <div class="logo">
-          <div class="mark">BS!</div>
-          <div>
-            <h1>bullshit!</h1>
-            <p>local lobby play</p>
-          </div>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center;">
-          <button class="secondary" id="btn-leave">Leave</button>
-        </div>
-      </header>
-
-      <!-- LOBBY -->
-      <div id="lobby-container">
-        <div class="input-row">
-          <input id="player-name" type="text" placeholder="your name" />
-          <input id="lobby-name" type="text" placeholder="lobby name" />
-          <button id="btn-join">join lobby</button>
+<div id="bs-banner">bullshit!</div>
+<div class="app">
+  <div class="card-shell">
+    <header class="app-header">
+      <div class="logo">
+        <div class="mark">BS!</div>
+        <div>
+          <h1>bullshit!</h1>
+          <p>local lobby play</p>
         </div>
       </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button class="secondary" id="btn-leave">Leave</button>
+      </div>
+    </header>
 
-      <!-- GAME -->
-      <div id="game-container-wrapper" style="display:none;">
-        <div class="board">
-          <div class="left">
-            <div class="meta">
-              <div>
-                <div id="game-info">current turn: —</div>
-              </div>
-              <div style="text-align:right;">
-                <div>player hand</div>
-                <div id="player-name-display">—</div>
-              </div>
+    <!-- LOBBY -->
+    <div id="lobby-container">
+      <div class="input-row">
+        <input id="player-name" type="text" placeholder="your name" />
+        <input id="lobby-name" type="text" placeholder="lobby name" />
+        <button id="btn-join">join lobby</button>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="game-container-wrapper" style="display:none;">
+      <div class="board">
+        <div class="left">
+          <div class="meta">
+            <div>
+              <div id="game-info">current turn: —</div>
             </div>
-            <div id="game-container" aria-live="polite"></div>
-            <div class="controls">
-              <button id="btn-play">play selected</button>
-              <button id="btn-draw" class="secondary">draw</button>
-              <button id="btn-bullshit">bullshit!</button>
+            <div style="text-align:right;">
+              <div>player hand</div>
+              <div id="player-name-display">—</div>
+            </div>
+          </div>
+          <div id="game-container" aria-live="polite"></div>
+          <div class="controls">
+            <button id="btn-play">play selected</button>
+            <button id="btn-draw" class="secondary">draw</button>
+            <button id="btn-bullshit">bullshit!</button>
+          </div>
+        </div>
+
+        <div class="right">
+          <!-- Top: Pile + Players -->
+          <div class="top-right">
+            <div class="pile-section">
+              <h3>Pile</h3>
+              <div id="pile-container"></div>
+            </div>
+            <div class="players-section">
+              <h3>Players</h3>
+              <ul id="players-list"></ul>
             </div>
           </div>
 
-          <div class="right">
-            <h3>pile</h3>
-            <div id="pile-container" class="pile-box"></div>
-
-            <h3>players</h3>
-            <ul id="players-list"></ul>
-
-            <h3>chat</h3>
+          <!-- Bottom: Chat -->
+          <div class="chat-section">
+            <h3>Chat</h3>
             <div id="chat-container">
               <div id="chat-messages"></div>
               <div id="chat-input-row">
@@ -390,14 +229,13 @@
             </div>
           </div>
         </div>
-      </div>
 
+      </div>
     </div>
   </div>
-
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script>
   const firebaseConfig = {
     apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
