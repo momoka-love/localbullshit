@@ -1,224 +1,232 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title> Bullshit!</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bullshit Game</title>
 
-<!-- Firebase (v8 namespaced) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-:root {
-  --bg:#fff0f6; --card:#ffffff; --muted:#b88ead; --accent:#ff80bf;
-  --danger:#ff4d6d; --panel:#ffe6f0;
-}
-html,body{
-  height:100%; margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;
-  background:linear-gradient(180deg,#fff0f6 0%, #ffe6f0 100%); color:#5a3d55;
-}
-.app{max-width:1100px;margin:18px auto;padding:18px;display:grid;grid-template-columns:320px 1fr;gap:18px;}
-.panel{
-  background:#ffffffcc; backdrop-filter: blur(10px); padding:14px; border-radius:14px;
-  box-shadow:0 6px 18px rgba(255,128,191,0.2);
-}
-h1{margin:0 0 12px 0;font-size:18px}
-label{display:block;color:var(--muted);font-size:12px;margin-top:8px}
-input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:#fff0f6;color:inherit}
-button{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer}
-button.secondary{background:transparent;border:1px solid var(--muted);color:var(--muted)}
-.small{font-size:13px;padding:6px 10px}
-.players-list{list-style:none;padding:0;margin:8px 0 0 0}
-.players-list li{padding:8px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.3);display:flex;justify-content:space-between;align-items:center}
-.players-list li.turn{outline:2px solid rgba(255,128,191,0.3);background:linear-gradient(90deg, rgba(255,128,191,0.1), transparent)}
-.players-list li.you{font-weight:600}
-.game-area{display:flex;flex-direction:column;gap:12px}
-.board{display:flex;gap:12px;align-items:flex-start}
-.hand{display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:rgba(255,255,255,0.3);border-radius:10px;min-height:88px}
-.card{min-width:56px;height:80px;border-radius:8px;background:linear-gradient(180deg,#fff,#ffe6f0);color:#5a3d55;display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;box-shadow:0 6px 12px rgba(90,61,85,0.3)}
-.card.selected{transform:translateY(-8px) scale(1.02);box-shadow:0 14px 28px rgba(90,61,85,0.3)}
-#pile{min-width:120px;min-height:120px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.3), transparent);display:flex;align-items:center;justify-content:center;position:relative}
-.pile-card{position:absolute;padding:6px 8px;border-radius:6px;background:#fff;color:#5a3d55;font-weight:700;box-shadow:0 10px 20px rgba(90,61,85,0.3);transform-origin:left top}
-.controls{display:flex;gap:8px;align-items:center}
-.chat{height:240px;overflow:auto;padding:8px;background:rgba(255,230,240,0.6);border-radius:10px}
-.notify{
-  position:fixed;top:20px;left:50%;transform:translateX(-50%);
-  background:var(--danger);color:white;font-weight:800;font-size:28px;padding:16px 28px;
-  border-radius:12px;box-shadow:0 8px 30px rgba(255,0,100,0.6);display:none;z-index:999;
-}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.turn-indicator{padding:8px;border-radius:8px;background:rgba(255,255,255,0.3);font-weight:600}
-.winner{padding:8px;background:linear-gradient(90deg,#ffd27a,#ffb86b);color:#331b00;border-radius:8px;font-weight:700}
-.modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center}
-.modal{background:#fff0f6;padding:18px;border-radius:12px;min-width:320px}
-.muted{color:var(--muted);font-size:13px}
-#bs-banner{
-  position:fixed;top:20%;left:50%;transform:translateX(-50%);
-  font-size:3em;font-weight:800;color:var(--danger);text-shadow:0 0 10px #fff,0 0 20px var(--accent);
-  display:none;pointer-events:none;z-index:998;text-align:center;
-}
-@media(max-width:880px){
-  .app{grid-template-columns:1fr; padding:12px}
-  .panel{order:2}
-}
+  body { font-family:sans-serif; margin:0; padding:0; background:#0f1724; color:#fff; }
+  #lobby-container, #game-container-wrapper { padding:20px; }
+  #game-container-wrapper { display:none; }
+  .card { display:inline-block; margin:4px; padding:12px; background:#fff; color:#000; border-radius:8px; cursor:pointer; }
+  .selected { transform:translateY(-5px); border:2px solid #4fd1c5; }
+  #pile-container .pile-card { margin:2px 0; background:#ddd; color:#000; padding:4px; border-radius:6px; }
+  #bs-banner { display:none; background:#ff6b6b; color:#fff; padding:10px; margin:10px 0; border-radius:6px; text-align:center; }
+  button { margin:4px; padding:6px 12px; border:none; border-radius:6px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<div id="bs-banner"> BULLSHIT! </div>
-<div id="page-notification" style="display:none;"></div>
-
-
-<div class="app">
-  <!-- LEFT PANEL -->
-  <div class="panel" id="left-panel">
-    <h1 Bullshit — Lobby</h1>
-    <div id="join-panel">
-      <label>Player name</label>
-      <input id="player-name" type="text" placeholder="Your name (e.g. Sam)"/>
-      <label>Lobby name</label>
-      <input id="lobby-name" type="text" placeholder="Lobby ID (e.g. myroom)"/>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button id="btn-join">Join</button>
-        <button id="btn-leave" class="secondary" disabled>Leave</button>
-      </div>
-      <p class="muted" id="join-status">Not connected</p>
-    </div>
-
-    <hr style="border:none;height:8px;opacity:0.02"/>
-
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <strong>Players</strong>
-      <span class="muted" id="player-count">0</span>
-    </div>
-    <ul class="players-list" id="players-list"></ul>
-
-    <div style="margin-top:10px">
-      <strong>Chat</strong>
-      <div class="chat" id="chat-messages"></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="chat-input" type="text" placeholder="Say something..." />
-        <button id="chat-send" class="small">Send</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL: Game area -->
-  <div class="panel game-area">
-    <div class="topbar">
-      <div>
-        <div class="turn-indicator" id="game-info">Current Turn: —</div>
-        <div class="muted" id="lobby-tag">Lobby: —</div>
-      </div>
-      <div id="winner-banner"></div>
-    </div>
-
-    <div class="board">
-      <div style="flex:1;">
-        <h3 style="margin:6px 0 8px 0">Your Hand</h3>
-        <div id="hand" class="hand" aria-live="polite"></div>
-
-        <div style="display:flex;align-items:center;margin-top:12px;gap:10px">
-          <div class="controls">
-            <button id="btn-play" class="small" disabled>Play Selected</button>
-            <button id="btn-draw" class="small" disabled>Draw</button>
-            <button id="btn-bullshit" class="small" disabled> Bullshit!</button>
-          </div>
-          <div id="declared-note" class="muted">Select cards, then Play</div>
-        </div>
-      </div>
-
-      <div style="width:260px;">
-        <h3 style="margin:6px 0 8px 0">Pile</h3>
-        <div id="pile" aria-live="polite"></div>
-        <div style="margin-top:10px" class="muted" id="pile-count">0 cards</div>
-      </div>
-    </div>
-
-    <div>
-      <h3 style="margin:8px 0">Game Controls</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button id="btn-play-again" class="secondary small" disabled>Play Again</button>
-        <button id="btn-reset-lobby" class="secondary small" disabled>Reset Lobby (host)</button>
-      </div>
-    </div>
-  </div>
+<div id="lobby-container">
+  <h2>Join Lobby</h2>
+  <input id="player-name" placeholder="Your name">
+  <input id="lobby-name" placeholder="Lobby name">
+  <button id="btn-join">Join</button>
 </div>
 
-<!-- Notification -->
-<div id="site-notification" class="notify"></div>
-<div id="modal-root" style="display:none"></div>
+<div id="game-container-wrapper">
+  <div id="bs-banner"></div>
+
+  <h3>Your Hand</h3>
+  <div id="game-container"></div>
+
+  <h3>Pile</h3>
+  <div id="pile-container"></div>
+
+  <h3>Players</h3>
+  <ul id="players-list"></ul>
+
+  <div id="game-info"></div>
+
+  <button id="btn-play">Play Selected</button>
+  <button id="btn-draw">Draw</button>
+  <button id="btn-bullshit">Call Bullshit</button>
+  <button id="btn-leave">Leave Lobby</button>
+</div>
 
 <script>
-/* -------------------------
-   Firebase config
-------------------------- */
-const firebaseConfig = {apiKey:"AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",authDomain:"bullshit-f4f8e.firebaseapp.com",databaseURL:"https://bullshit-f4f8e-default-rtdb.firebaseio.com",projectId:"bullshit-f4f8e",storageBucket:"bullshit-f4f8e.appspot.com",messagingSenderId:"497908378251",appId:"1:497908378251:web:8f93b8a4d1d27539b2c28e"};
+// Firebase setup
+const firebaseConfig = {
+  apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
+  authDomain: "bullshit-f4f8e.firebaseapp.com",
+  databaseURL: "https://bullshit-f4f8e-default-rtdb.firebaseio.com",
+  projectId: "bullshit-f4f8e",
+  storageBucket: "bullshit-f4f8e.appspot.com",
+  messagingSenderId: "497908378251",
+  appId: "1:497908378251:web:8f93b8a4d1d27539b2c28e"
+};
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-/* -------------------------
-   Game vars
-------------------------- */
-const suits=['♠','♥','♦','♣'], ranks=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-let playerName="", lobbyName="", lobbyRef=null, messagesRef=null, lobbyUnsub=null, chatUnsub=null;
-let playerHand=[], pile=[], currentTurn="", playerOrder=[], joined=false, selectedCards=new Set(), txPending=false;
+// Game variables
+const suits = ['♠','♥','♦','♣'];
+const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
-/* -------------------------
-   UI helpers
-------------------------- */
-function showNotification(msg, duration = 3000){
-  const n = document.getElementById('page-notification');
-  if(!n) return;
-  n.textContent = msg;
-  n.style.display = 'block';
-  n.classList.add('show');
+let playerName="", lobbyName="", lobbyRef=null, messagesRef=null;
+let playerHand=[], pile=[], currentTurn="", joined=false;
+let selectedCards=new Set();
+let lobbyUnsub=null;
 
-  setTimeout(() => {
-    n.classList.remove('show');
-    setTimeout(()=> n.style.display='none', 300); // wait for transition
-  }, duration);
+// Utilities
+function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
+function getNextRank(lastRank){ if(!lastRank) return ranks[0]; return ranks[(ranks.indexOf(lastRank)+1)%ranks.length]; }
+
+// Visual Bullshit banner
+function showBullshitBanner(msg){
+  const banner=document.getElementById('bs-banner');
+  banner.textContent=msg;
+  banner.style.display='block';
+  setTimeout(()=>{ banner.style.display='none'; }, 2000);
 }
 
-  }
+// Join lobby
+async function joinLobby(){
+  playerName=document.getElementById('player-name').value.trim();
+  lobbyName=document.getElementById('lobby-name').value.trim();
+  if(!playerName||!lobbyName){ alert("Enter name and lobby"); return; }
+
+  lobbyRef=db.ref('lobbies/'+lobbyName);
+
+  try{
+    await lobbyRef.transaction(game=>{
+      if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
+      game.players=game.players||{};
+      if(!game.players[playerName]) game.players[playerName]=Array.from({length:5},()=>randomCard());
+      playerHand=game.players[playerName].slice();
+      game.currentTurn=game.currentTurn||playerName;
+      return game;
+    });
+
+    joined=true;
+    document.getElementById('lobby-container').style.display='none';
+    document.getElementById('game-container-wrapper').style.display='block';
+
+    if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+    lobbyUnsub=lobbyRef.on('value', snapshot=>{
+      const game=snapshot.val()||{};
+      pile=game.pile||[];
+      currentTurn=game.currentTurn||"";
+      if(game.players&&game.players[playerName]) playerHand=game.players[playerName].slice();
+      updateUI(game.players||{}, game.winner||null);
+      if(game.winner) showBullshitBanner(`${game.winner} wins!`);
+    });
+
+  }catch(err){ console.error(err); alert("Failed to join: "+err.message);}
 }
-function setJoinState(isJoined){
-  document.getElementById('btn-join').disabled=isJoined;
-  document.getElementById('btn-leave').disabled=!isJoined;
-  document.getElementById('chat-send').disabled=!isJoined;
-  document.getElementById('chat-input').disabled=!isJoined;
-  document.getElementById('btn-play-again').disabled=!isJoined;
-  document.getElementById('btn-reset-lobby').disabled=!isJoined;
+
+// Toggle card
+function toggleCard(idx){ if(selectedCards.has(idx)) selectedCards.delete(idx); else selectedCards.add(idx); updateUI(); }
+
+// Play selected
+async function playSelected(){
+  if(!joined||selectedCards.size===0||currentTurn!==playerName) return;
+  const indices=[...selectedCards].sort((a,b)=>a-b);
+  const cardsPreview=indices.map(i=>playerHand[i]);
+  const lastDeclared=pile.length?pile[pile.length-1].declared:null;
+  const requiredDeclared=getNextRank(lastDeclared);
+  let declared=prompt(`Declare rank:`, requiredDeclared || cardsPreview[0].slice(0,-1)) || requiredDeclared;
+  declared=declared.trim();
+  if(requiredDeclared && declared!==requiredDeclared){ alert(`Must declare ${requiredDeclared}`); return; }
+
+  await lobbyRef.transaction(game=>{
+    if(!game) return game;
+    if(game.currentTurn!==playerName) return game;
+    const hand=game.players[playerName].slice();
+    if(indices.some(i=>i<0||i>=hand.length)) return game;
+    const played=indices.map(i=>hand[i]);
+    game.players[playerName]=hand.filter((_,i)=>!indices.includes(i));
+    played.forEach(c=>game.pile.push({card:c, declared, player:playerName}));
+    if(game.players[playerName].length===0) game.winner=playerName;
+    const allPlayers=Object.keys(game.players).sort();
+    if(allPlayers.length>0){ let idx=allPlayers.indexOf(game.currentTurn); if(idx===-1) idx=0; game.currentTurn=allPlayers[(idx+1)%allPlayers.length]; } else game.currentTurn=null;
+    return game;
+  });
+  selectedCards.clear();
 }
 
-/* -------------------------
-   Utility
-------------------------- */
-function randomCard(){return ranks[Math.floor(Math.random()*ranks.length)]+suits[Math.floor(Math.random()*suits.length)];}
-function getNextRank(lastRank){if(!lastRank) return ranks[0]; const idx=ranks.indexOf(lastRank); return ranks[(idx+1)%ranks.length];}
+// Draw card
+async function drawCard(){
+  if(!joined||currentTurn!==playerName) return;
+  const newCard=randomCard();
+  await lobbyRef.child('players').child(playerName).transaction(hand=>{ hand=hand||[]; hand.push(newCard); return hand; });
+}
 
-/* -------------------------
-   All your existing game logic
-   (joinLobby, leaveLobby, playSelected, drawCard, callBS, updateUI, etc.)
-   remains the same as your original file
-------------------------- */
+// Call Bullshit
+async function callBS(){
+  if(!joined||pile.length===0) return;
+  await lobbyRef.transaction(game=>{
+    if(!game||!game.pile) return game;
+    const last=game.pile[game.pile.length-1];
+    const pileCards=game.pile.map(p=>p.card);
+    game.players=game.players||{};
+    if(last.card.slice(0,-1)===last.declared) game.players[playerName]=(game.players[playerName]||[]).concat(pileCards);
+    else game.players[last.player]=(game.players[last.player]||[]).concat(pileCards);
+    game.pile=[];
+    game.currentTurn=playerName;
+    return game;
+  });
+  showBullshitBanner("BULLSHIT called!");
+}
 
-/* Wiring UI buttons */
+// Leave lobby
+async function leaveLobby(){
+  if(!joined) return;
+  await lobbyRef.child('players').child(playerName).remove();
+  joined=false;
+  playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
+  document.getElementById('game-container-wrapper').style.display='none';
+  document.getElementById('lobby-container').style.display='block';
+}
+
+// Update UI
+function updateUI(players={}, winner=null){
+  const container=document.getElementById('game-container');
+  container.innerHTML='';
+  playerHand.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.textContent=c; div.className='card';
+    if(selectedCards.has(i)) div.classList.add('selected');
+    div.onclick=()=>toggleCard(i);
+    container.appendChild(div);
+  });
+
+  const pileContainer=document.getElementById('pile-container');
+  pileContainer.innerHTML='';
+  pile.forEach((p,i)=>{
+    const div=document.createElement('div');
+    div.textContent=(p.player===playerName)?`${p.card} (${p.declared})`:`${p.declared} (by ${p.player})`;
+    div.className='pile-card';
+    pileContainer.appendChild(div);
+  });
+
+  const list=document.getElementById('players-list');
+  list.innerHTML='';
+  Object.entries(players).forEach(([name,hand])=>{
+    const li=document.createElement('li');
+    li.textContent=`${name} - ${hand.length} card${hand.length!==1?'s':''}`;
+    if(name===currentTurn) li.style.fontWeight='bold';
+    if(hand.length===0) li.style.textDecoration='underline';
+    list.appendChild(li);
+  });
+
+  document.getElementById('game-info').textContent=`Current Turn: ${currentTurn}`;
+
+  document.getElementById('btn-play').disabled=!joined||currentTurn!==playerName||winner;
+  document.getElementById('btn-draw').disabled=!joined||currentTurn!==playerName||winner;
+  document.getElementById('btn-bullshit').disabled=!joined||pile.length===0||winner;
+}
+
+// Event listeners
 document.getElementById('btn-join').onclick=joinLobby;
-document.getElementById('btn-leave').onclick=leaveLobby;
-document.getElementById('chat-send').onclick=sendMessage;
-document.getElementById('chat-input').addEventListener('keypress',e=>{if(e.key==='Enter') sendMessage();});
 document.getElementById('btn-play').onclick=playSelected;
 document.getElementById('btn-draw').onclick=drawCard;
 document.getElementById('btn-bullshit').onclick=callBS;
-document.getElementById('btn-play-again').onclick=playAgain;
-document.getElementById('btn-reset-lobby').onclick=resetLobby;
-
-/* Initial render */
-updateUI();
-setJoinState(false);
-window._game={joinLobby, leaveLobby, playSelected, drawCard, callBS, db};
+document.getElementById('btn-leave').onclick=leaveLobby;
 </script>
+
 </body>
 </html>
