@@ -273,6 +273,75 @@
       align-items:center;
     }
 
+    /* Chat specific (matching style) */
+    .chat-box{
+      border-radius:12px;
+      padding:10px;
+      min-height:120px;
+      max-height:220px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:flex-start;
+      overflow:auto;
+      background: linear-gradient(180deg,#fff,#fff8fb);
+      border:1px solid rgba(83,50,75,0.06);
+    }
+
+    .chat-line{
+      width:100%;
+      display:flex;
+      gap:6px;
+      align-items:flex-start;
+      font-size:13px;
+    }
+
+    .chat-from{
+      font-weight:700;
+      color:#6a3b52;
+      min-width:60px;
+    }
+
+    .chat-body{
+      color:#513144;
+      font-weight:500;
+      flex:1 1 auto;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .chat-ts{
+      color:var(--muted);
+      font-size:11px;
+      margin-left:6px;
+      white-space:nowrap;
+    }
+
+    .chat-input-row{
+      display:flex;
+      gap:8px;
+      margin-top:8px;
+      align-items:center;
+    }
+
+    #chat-input{
+      flex:1 1 auto;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(83,50,75,0.06);
+      background:transparent;
+      outline:none;
+      font-size:14px;
+    }
+
+    #btn-send-chat{
+      padding:10px 12px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow: 0 8px 20px rgba(255,105,168,0.08);
+    }
+
     @media (max-width:800px){
       .board{ flex-direction:column; }
       .right{ width:100%; }
@@ -351,6 +420,17 @@
               <!-- players -->
             </ul>
 
+            <!-- CHAT: added UI -->
+            <h3 style="margin-top:16px;margin-bottom:8px;">chat</h3>
+            <div id="chat-container" class="chat-box" aria-live="polite">
+              <!-- chat messages -->
+            </div>
+
+            <div class="chat-input-row" style="margin-top:8px;">
+              <input id="chat-input" type="text" placeholder="say hi..." />
+              <button id="btn-send-chat">send</button>
+            </div>
+
             <div class="footer">
               <div style="font-size:12px;">have fun! </div>
               <div style="font-size:12px;color:var(--muted);">made by lily</div>
@@ -390,9 +470,16 @@
   let selectedCards=new Set();
   let lobbyUnsub=null;
 
+  // ---- Chat variables ----
+  let chatRef = null;
+  let chatUnsub = null;
+
   // ---- Utils ----
   function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
   function getNextRank(lastRank){ if(!lastRank) return ranks[0]; return ranks[(ranks.indexOf(lastRank)+1)%ranks.length]; }
+
+  // create text node safely
+  function escapeTextNode(text){ return document.createTextNode(text == null ? '' : text); }
 
   // ---- Visual Bullshit banner ----
   function showBullshitBanner(msg){
@@ -435,6 +522,27 @@
         updateUI(game.players||{}, game.winner||null);
         if(game.winner) showBullshitBanner(`${game.winner} wins!`);
       });
+
+      // --- Chat setup ---
+      chatRef = lobbyRef.child('chat');
+
+      // initial load of existing messages (ordered by push key)
+      chatRef.once('value', snap => {
+        const data = snap.val() || {};
+        const msgs = Object.values(data);
+        const container = document.getElementById('chat-container');
+        container.innerHTML = '';
+        msgs.forEach(m => appendChatMessage(m));
+      });
+
+      // live listener for new messages
+      if(chatUnsub) chatRef.off('child_added', chatUnsub);
+      chatUnsub = chatRef.on('child_added', snapshot => {
+        const msg = snapshot.val();
+        appendChatMessage(msg);
+      });
+
+      updateChatControls();
 
     }catch(err){ console.error(err); alert("failed to join: "+err.message);}
   }
@@ -502,12 +610,79 @@
   async function leaveLobby(){
     if(!joined) return;
     await lobbyRef.child('players').child(playerName).remove();
+
+    // remove chat listener
+    if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
+    chatUnsub = null;
+    chatRef = null;
+
     joined=false;
     playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
     document.getElementById('game-container-wrapper').style.display='none';
     document.getElementById('lobby-container').style.display='flex';
     document.getElementById('player-name-display').textContent='—';
     if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+    lobbyUnsub = null;
+    updateChatControls();
+  }
+
+  // ---- Chat: append message to UI ----
+  function appendChatMessage(msg){
+    if(!msg) return;
+    const container = document.getElementById('chat-container');
+    if(!container) return;
+
+    const line = document.createElement('div');
+    line.className = 'chat-line';
+
+    const who = document.createElement('div');
+    who.className = 'chat-from';
+    who.appendChild(escapeTextNode(msg.from || 'anon'));
+
+    const body = document.createElement('div');
+    body.className = 'chat-body';
+    body.appendChild(escapeTextNode(msg.text || ''));
+
+    const t = document.createElement('div');
+    t.className = 'chat-ts';
+    const dt = msg.ts ? new Date(msg.ts) : new Date();
+    t.appendChild(escapeTextNode(dt.toLocaleTimeString()));
+
+    line.appendChild(who);
+    line.appendChild(body);
+    line.appendChild(t);
+
+    container.appendChild(line);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // ---- Chat: send message ----
+  async function sendChatMessage(){
+    if(!joined || !lobbyRef) return;
+    const input = document.getElementById('chat-input');
+    if(!input) return;
+    const text = input.value.trim();
+    if(!text) return;
+    const msg = { from: playerName || 'anon', text, ts: Date.now() };
+    try {
+      await lobbyRef.child('chat').push(msg);
+      input.value = '';
+    } catch(err) {
+      console.error("failed sending chat:", err);
+    }
+  }
+
+  // enable/disable chat controls
+  function updateChatControls(){
+    const btn = document.getElementById('btn-send-chat');
+    const input = document.getElementById('chat-input');
+    if(!btn || !input) return;
+    btn.disabled = !joined;
+    input.disabled = !joined;
+    if(!joined){
+      const container = document.getElementById('chat-container');
+      if(container) container.innerHTML = '';
+    }
   }
 
   // ---- Update UI ----
@@ -550,6 +725,7 @@
     document.getElementById('btn-play').disabled=!joined||currentTurn!==playerName||winner;
     document.getElementById('btn-draw').disabled=!joined||currentTurn!==playerName||winner;
     document.getElementById('btn-bullshit').disabled=!joined||pile.length===0||winner;
+    updateChatControls();
   }
 
   // ---- Event listeners ----
@@ -558,6 +734,10 @@
   document.getElementById('btn-draw').onclick=drawCard;
   document.getElementById('btn-bullshit').onclick=callBS;
   document.getElementById('btn-leave').onclick=leaveLobby;
+
+  // chat listeners
+  document.getElementById('btn-send-chat').onclick = sendChatMessage;
+  document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendChatMessage(); });
 
   // small UX: press Enter in lobby inputs to join
   document.getElementById('lobby-name').addEventListener('keydown', e => { if(e.key === 'Enter') joinLobby(); });
