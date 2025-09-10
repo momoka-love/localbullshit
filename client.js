@@ -1,5 +1,4 @@
 // client.js
-// Firebase config + init
 const firebaseConfig = {
   apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
   authDomain: "bullshit-f4f8e.firebaseapp.com",
@@ -16,24 +15,23 @@ const db = firebase.database();
 const suits = ['♠','♥','♦','♣'];
 const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
-let playerName = "", lobbyName = "", lobbyRef = null;
-let playerHand = [], pile = [], currentTurn = "", joined = false;
+let playerName="", lobbyName="", lobbyRef=null;
+let playerHand=[], pile=[], currentTurn="", joined=false;
 let selectedCards = new Set();
-let lobbyUnsub = null;
-let chatRef = null;
-let chatUnsub = null;
+let lobbyUnsub=null;
+let chatRef=null;
+let chatUnsub=null;
 
 // --- Utils ---
-function randomCard() { return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
-function normalizeRank(r) { return r ? r.toString().trim().toUpperCase() : null; }
-function getNextRank(lastRank) {
-  if(!lastRank) return null;
+function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
+function normalizeRank(r){ return r ? r.toString().trim().toUpperCase() : null; }
+function getNextRank(lastRank){ 
+  if(!lastRank) return null; 
   lastRank = normalizeRank(lastRank);
   const idx = ranks.indexOf(lastRank);
   if(idx===-1) return null;
   return ranks[(idx+1)%ranks.length];
 }
-function escapeText(text) { return document.createTextNode(text == null ? '' : text); }
 function showBullshitBanner(msg){
   const banner = document.getElementById('bs-banner');
   banner.textContent = msg;
@@ -49,41 +47,37 @@ async function joinLobby(){
 
   lobbyRef = db.ref('lobbies/'+lobbyName);
 
-  try{
-    await lobbyRef.transaction(game=>{
-      if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
-      game.players = game.players||{};
-      if(!game.players[playerName]) game.players[playerName] = Array.from({length:5},()=>randomCard());
-      game.currentTurn = game.currentTurn || playerName;
-      return game;
-    });
+  await lobbyRef.transaction(game=>{
+    if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
+    game.players = game.players || {};
+    if(!game.players[playerName]) game.players[playerName] = Array.from({length:5},()=>randomCard());
+    playerHand = game.players[playerName].slice();
+    game.currentTurn = game.currentTurn || playerName;
+    return game;
+  });
 
-    joined = true;
-    document.getElementById('lobby-container').style.display='none';
-    document.getElementById('game-container-wrapper').style.display='block';
+  joined = true;
+  document.getElementById('lobby-container').style.display='none';
+  document.getElementById('game-container-wrapper').style.display='block';
 
-    // Listen for game updates
-    if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-    lobbyUnsub = lobbyRef.on('value', snapshot=>{
-      const game = snapshot.val()||{};
-      pile = game.pile||[];
-      currentTurn = game.currentTurn||"";
-      if(game.players && game.players[playerName]) playerHand = game.players[playerName].slice();
-      updateUI(game.players||{}, game.winner||null);
-      if(game.winner) showBullshitBanner(`${game.winner} wins!`);
-    });
+  if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
+  lobbyUnsub = lobbyRef.on('value', snapshot=>{
+    const game = snapshot.val()||{};
+    pile = game.pile||[];
+    currentTurn = game.currentTurn||"";
+    if(game.players && game.players[playerName]) playerHand = game.players[playerName].slice();
+    updateUI(game.players||{}, game.winner||null);
+    if(game.winner) showBullshitBanner(`${game.winner} wins!`);
+  });
 
-    // Chat
-    chatRef = lobbyRef.child('chat');
-    if(chatUnsub) chatRef.off('child_added', chatUnsub);
-    chatUnsub = chatRef.on('child_added', snapshot=>{
-      appendChatMessage(snapshot.val());
-    });
-
-  }catch(err){ console.error(err); alert("Failed to join: "+err.message);}
+  chatRef = lobbyRef.child('chat');
+  if(chatUnsub) chatRef.off('child_added', chatUnsub);
+  chatUnsub = chatRef.on('child_added', snapshot=>{
+    appendChatMessage(snapshot.val());
+  });
 }
 
-// --- Toggle card selection ---
+// --- Toggle Card ---
 function toggleCard(idx){
   if(selectedCards.has(idx)) selectedCards.delete(idx);
   else selectedCards.add(idx);
@@ -91,10 +85,10 @@ function toggleCard(idx){
 }
 
 // --- Play Selected ---
-async function playSelected() {
+async function playSelected(){
   if(!joined || selectedCards.size===0 || currentTurn!==playerName) return;
-  const indices = [...selectedCards].sort((a,b)=>b-a); // descending
 
+  const indices = [...selectedCards].sort((a,b)=>b-a); // descending
   const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
   const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
 
@@ -111,19 +105,27 @@ async function playSelected() {
 
   await lobbyRef.transaction(game=>{
     if(!game || !game.players || game.currentTurn!==playerName) return game;
+    const hand = game.players[playerName];
 
-    const hand = game.players[playerName].slice();
-    const playedCards = indices.map(i=>hand[i]);
-    game.players[playerName] = hand.filter((_,i)=>!indices.includes(i));
+    const played = [];
+    for(const i of indices){
+      if(i>=0 && i<hand.length){
+        played.push(hand[i]);
+        hand.splice(i,1); // remove card
+      }
+    }
 
     game.pile = game.pile || [];
-    playedCards.forEach(c=>game.pile.push({card:c, declared, player:playerName}));
+    played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
 
-    if(game.players[playerName].length === 0) game.winner = playerName;
+    if(hand.length===0) game.winner = playerName;
 
-    const allPlayers = Object.keys(game.players);
-    let idx = allPlayers.indexOf(playerName);
-    game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
+    // Move turn to next player
+    const allPlayers = Object.keys(game.players).filter(p=>game.players[p].length>0);
+    if(allPlayers.length>0){
+      let idx = allPlayers.indexOf(playerName);
+      game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
+    } else game.currentTurn = null;
 
     return game;
   });
@@ -131,29 +133,33 @@ async function playSelected() {
   selectedCards.clear();
 }
 
-// --- Draw Card ---
-async function drawCard() {
+// --- Draw ---
+async function drawCard(){
   if(!joined || currentTurn!==playerName) return;
+  const newCard = randomCard();
   await lobbyRef.child('players').child(playerName).transaction(hand=>{
     hand = hand||[];
-    hand.push(randomCard());
+    hand.push(newCard);
     return hand;
   });
 }
 
 // --- Call Bullshit ---
-async function callBS() {
+async function callBS(){
   if(!joined || pile.length===0) return;
   await lobbyRef.transaction(game=>{
     if(!game || !game.pile || !game.players) return game;
     const last = game.pile[game.pile.length-1];
     const pileCards = game.pile.map(p=>p.card);
-    const lastCardRank = last.card.slice(0,-1).toUpperCase();
-    const declaredRank = last.declared.toUpperCase();
 
-    if(lastCardRank===declaredRank) {
+    const lastRank = last.card.slice(0,-1).toUpperCase();
+    const declared = last.declared.toUpperCase();
+
+    if(lastRank===declared){
+      // caller is wrong
       game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
     } else {
+      // last player lied
       game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
     }
 
@@ -165,17 +171,13 @@ async function callBS() {
 }
 
 // --- Leave Lobby ---
-async function leaveLobby() {
+async function leaveLobby(){
   if(!joined) return;
   await lobbyRef.child('players').child(playerName).remove();
   if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
   if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
-  joined = false;
-  playerName = "";
-  lobbyName = "";
-  playerHand = [];
-  pile = [];
-  currentTurn = "";
+  joined=false;
+  playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
   selectedCards.clear();
   document.getElementById('game-container-wrapper').style.display='none';
   document.getElementById('lobby-container').style.display='block';
@@ -194,10 +196,10 @@ async function sendChatMessage(){
 function appendChatMessage(msg){
   const container = document.getElementById('chat-container');
   if(!container) return;
-  const line = document.createElement('div');
-  line.className='chat-message';
-  line.textContent = `${msg.player}: ${msg.text}`;
-  container.appendChild(line);
+  const div = document.createElement('div');
+  div.className='chat-message';
+  div.textContent = `${msg.player}: ${msg.text}`;
+  container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
