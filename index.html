@@ -159,6 +159,7 @@
       display:flex;
       flex-direction:column;
       gap:12px;
+      max-height:80vh; /* constrain panel height */
     }
 
     #game-container{
@@ -206,6 +207,8 @@
       flex-direction:column;
       gap:8px;
       align-items:flex-start;
+      overflow-y:auto;
+      max-height:120px; /* scrollable pile */
     }
 
     .pile-card{
@@ -227,6 +230,8 @@
       display:flex;
       flex-direction:column;
       gap:8px;
+      overflow-y:auto;
+      max-height:120px; /* scrollable player list */
     }
 
     ul#players-list li{
@@ -249,11 +254,12 @@
     #chat-container{
       display:flex;
       flex-direction:column;
-      height:200px;
+      flex:1 1 auto;
       border-radius:12px;
       background:rgba(255,255,255,0.6);
       border:1px solid rgba(83,50,75,0.08);
       overflow:hidden;
+      min-height:120px;
     }
 
     #chat-messages{
@@ -313,7 +319,7 @@
 
     @media (max-width:800px){
       .board{ flex-direction:column; }
-      .right{ width:100%; }
+      .right{ width:100%; max-height:none; }
     }
   </style>
 </head>
@@ -389,7 +395,6 @@
     </div>
   </div>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
