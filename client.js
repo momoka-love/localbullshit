@@ -33,7 +33,6 @@ function getNextRank(lastRank) {
   if(idx===-1) return null;
   return ranks[(idx+1)%ranks.length];
 }
-function escapeText(text) { return document.createTextNode(text == null ? '' : text); }
 function showBullshitBanner(msg){
   const banner = document.getElementById('bs-banner');
   banner.textContent = msg;
@@ -107,38 +106,50 @@ async function playSelected() {
     return;
   }
 
-  await lobbyRef.transaction(game=>{
-    if(!game || !game.players || game.currentTurn !== playerName) return game;
-    const hand = game.players[playerName]||[];
-    const indices = [...selectedCards].sort((a,b)=>b-a); // descending for safe splice
-    const played = [];
-    for(const i of indices){
-      if(i>=0 && i<hand.length){
-        played.push(hand[i]);
-        hand.splice(i,1); // remove by index
-      }
-    }
+  const indices = [...selectedCards].sort((a,b)=>b-a); // descending
+  const played = [];
+  const newHand = [...playerHand];
 
-    game.players[playerName] = hand;
+  for(const i of indices){
+    if(i>=0 && i<newHand.length){
+      played.push(newHand[i]);
+      newHand.splice(i,1);
+    }
+  }
+
+  // Optimistically update local state
+  playerHand = newHand;
+  pile = [...pile, ...played.map(c => ({card:c, declared, player:playerName}))];
+  selectedCards.clear();
+  updateUI();
+
+  // Update Firebase
+  await lobbyRef.transaction(game=>{
+    if(!game || !game.players || game.currentTurn!==playerName) return game;
+
+    game.players[playerName] = newHand;
     game.pile = game.pile || [];
     played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
 
-    if(hand.length === 0) game.winner = playerName;
+    if(newHand.length === 0) game.winner = playerName;
 
     const allPlayers = Object.keys(game.players);
     const idx = allPlayers.indexOf(playerName);
-    game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
+    game.currentTurn = allPlayers[(idx+1) % allPlayers.length];
 
     return game;
   });
-
-  selectedCards.clear();
 }
 
 // --- Draw a card ---
 async function drawCard() {
   if(!joined || currentTurn!==playerName) return;
   const newCard = randomCard();
+
+  // Update locally
+  playerHand.push(newCard);
+  updateUI();
+
   await lobbyRef.child('players').child(playerName).transaction(hand=>{
     hand = hand||[];
     hand.push(newCard);
@@ -149,10 +160,17 @@ async function drawCard() {
 // --- Call Bullshit ---
 async function callBS() {
   if(!joined || pile.length===0) return;
+
+  const last = pile[pile.length-1];
+  const pileCards = pile.map(p=>p.card);
+
+  // Optimistic UI update: clear pile locally
+  pile = [];
+  updateUI();
+
   await lobbyRef.transaction(game=>{
     if(!game || !game.pile || !game.players) return game;
-    const last = game.pile[game.pile.length-1];
-    const pileCards = game.pile.map(p=>p.card);
+
     const lastCardRank = last.card.slice(0,-1).toUpperCase();
     const declaredRank = last.declared.toUpperCase();
 
@@ -166,15 +184,18 @@ async function callBS() {
     game.currentTurn = playerName;
     return game;
   });
+
   showBullshitBanner("bullshit!");
 }
 
 // --- Leave lobby ---
 async function leaveLobby() {
   if(!joined) return;
+
   await lobbyRef.child('players').child(playerName).remove();
   if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
   if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
+
   joined = false;
   playerName = "";
   lobbyName = "";
@@ -182,6 +203,7 @@ async function leaveLobby() {
   pile = [];
   currentTurn = "";
   selectedCards.clear();
+
   document.getElementById('game-container-wrapper').style.display='none';
   document.getElementById('lobby-container').style.display='block';
   updateUI();
@@ -196,6 +218,7 @@ async function sendChatMessage(){
   await chatRef.push({player:playerName, text, ts:Date.now()});
   input.value='';
 }
+
 function appendChatMessage(msg){
   const container = document.getElementById('chat-container');
   if(!container) return;
@@ -242,6 +265,7 @@ function updateUI(players={}, winner=null){
   document.getElementById('btn-play').disabled = !joined || currentTurn!==playerName || winner;
   document.getElementById('btn-draw').disabled = !joined || currentTurn!==playerName || winner;
   document.getElementById('btn-bullshit').disabled = !joined || pile.length===0 || winner;
+
   const btn = document.getElementById('chat-send');
   const input = document.getElementById('chat-input');
   if(btn && input){ btn.disabled = !joined; input.disabled = !joined; }
