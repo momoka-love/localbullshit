@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bullshit!</title>
+  <title>bullshit!</title>
 
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
@@ -145,6 +145,7 @@
       flex-wrap:wrap;
     }
 
+    /* keep right column stacked and compact so it doesn't create large empty bottom space */
     .left, .right{
       background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
       border-radius:14px;
@@ -161,6 +162,11 @@
     .right{
       width:300px;
       min-width:260px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      /* ensure right column doesn't push page too tall; overflow items scroll internally */
+      max-height:62vh;
     }
 
     /* player's hand grid */
@@ -210,6 +216,8 @@
       flex-direction:column;
       gap:8px;
       align-items:flex-start;
+      overflow:auto;
+      max-height:28vh;
     }
 
     .pile-card{
@@ -231,6 +239,8 @@
       display:flex;
       flex-direction:column;
       gap:8px;
+      max-height:16vh;
+      overflow:auto;
     }
 
     ul#players-list li{
@@ -278,7 +288,7 @@
       border-radius:12px;
       padding:10px;
       min-height:120px;
-      max-height:220px;
+      max-height:28vh;
       display:flex;
       flex-direction:column;
       gap:8px;
@@ -344,7 +354,8 @@
 
     @media (max-width:800px){
       .board{ flex-direction:column; }
-      .right{ width:100%; }
+      .right{ width:100%; max-height:none; }
+      .pile-box, .chat-box, ul#players-list { max-height:200px; }
     }
   </style>
 </head>
@@ -415,13 +426,13 @@
               <!-- pile items here -->
             </div>
 
-            <h3 style="margin-top:16px;margin-bottom:8px;">players</h3>
+            <h3 style="margin-top:8px;margin-bottom:8px;">players</h3>
             <ul id="players-list">
               <!-- players -->
             </ul>
 
-            <!-- CHAT: added UI -->
-            <h3 style="margin-top:16px;margin-bottom:8px;">chat</h3>
+            <!-- Chat: added UI -->
+            <h3 style="margin-top:8px;margin-bottom:8px;">chat</h3>
             <div id="chat-container" class="chat-box" aria-live="polite">
               <!-- chat messages -->
             </div>
@@ -431,7 +442,7 @@
               <button id="btn-send-chat">send</button>
             </div>
 
-            <div class="footer">
+            <div class="footer" style="margin-top:10px;">
               <div style="font-size:12px;">have fun! </div>
               <div style="font-size:12px;color:var(--muted);">made by lily</div>
             </div>
@@ -476,9 +487,22 @@
 
   // ---- Utils ----
   function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
-  function getNextRank(lastRank){ if(!lastRank) return ranks[0]; return ranks[(ranks.indexOf(lastRank)+1)%ranks.length]; }
 
-  // create text node safely
+  function normalizeRank(r) {
+    if (!r) return null;
+    return r.toString().trim().toUpperCase();
+  }
+
+  // Robust getNextRank: returns null when unknown/no last rank
+  function getNextRank(lastRank) {
+    if (!lastRank) return null;
+    const norm = normalizeRank(lastRank);
+    const idx = ranks.indexOf(norm);
+    if (idx === -1) return null;
+    return ranks[(idx + 1) % ranks.length];
+  }
+
+  // safe text node creation
   function escapeTextNode(text){ return document.createTextNode(text == null ? '' : text); }
 
   // ---- Visual Bullshit banner ----
@@ -487,6 +511,28 @@
     banner.textContent=msg;
     banner.style.display='block';
     setTimeout(()=>{ banner.style.display='none'; }, 2200);
+  }
+
+  // One-time sanitize helper for existing pile entries (safe to call repeatedly)
+  async function sanitizePileOnce() {
+    if(!lobbyRef) return;
+    try {
+      await lobbyRef.child('pile').transaction(pileArr => {
+        if (!pileArr) return pileArr;
+        return pileArr.map(p => {
+          const cardRank = p && p.card ? p.card.slice(0, -1) : null;
+          const declaredRaw = p && p.declared ? p.declared : cardRank;
+          const declared = normalizeRank(declaredRaw) || cardRank;
+          return {
+            card: p.card,
+            declared: declared,
+            player: p.player
+          };
+        });
+      });
+    } catch (e) {
+      console.warn("sanitizePileOnce failed:", e);
+    }
   }
 
   // ---- Join Lobby ----
@@ -507,6 +553,9 @@
         return game;
       });
 
+      // sanitize existing pile entries (non-destructive)
+      await sanitizePileOnce();
+
       // Update UI state
       joined=true;
       document.getElementById('lobby-container').style.display='none';
@@ -525,8 +574,7 @@
 
       // --- Chat setup ---
       chatRef = lobbyRef.child('chat');
-
-      // initial load of existing messages (ordered by push key)
+      // initial load
       chatRef.once('value', snap => {
         const data = snap.val() || {};
         const msgs = Object.values(data);
@@ -559,23 +607,63 @@
     if(!joined||selectedCards.size===0||currentTurn!==playerName) return;
     const indices=[...selectedCards].sort((a,b)=>a-b);
     const cardsPreview=indices.map(i=>playerHand[i]);
-    const lastDeclared=pile.length?pile[pile.length-1].declared:null;
-    const requiredDeclared=getNextRank(lastDeclared);
-    let declared=prompt(`declare rank:`, requiredDeclared || cardsPreview[0].slice(0,-1)) || requiredDeclared;
-    declared=declared.trim();
-    if(requiredDeclared && declared!==requiredDeclared){ alert(`u have to declare ${requiredDeclared}`); return; }
 
+    // Robust extraction of last declared rank
+    const lastPileItem = pile.length ? pile[pile.length - 1] : null;
+    let lastDeclaredRaw = null;
+    if (lastPileItem) {
+      lastDeclaredRaw = lastPileItem.declared || (lastPileItem.card && lastPileItem.card.slice(0,-1));
+    }
+    let lastDeclared = lastDeclaredRaw ? normalizeRank(lastDeclaredRaw) : null;
+    if (lastDeclared && !ranks.includes(lastDeclared)) lastDeclared = null;
+
+    const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
+
+    // Prompt player
+    let declared = prompt(
+      requiredDeclared 
+        ? `You must declare the next rank: ${requiredDeclared}` 
+        : `Declare any rank to start the sequence`,
+      requiredDeclared || cardsPreview[0].slice(0,-1)
+    );
+    if(!declared) return;
+    declared = normalizeRank(declared);
+
+    // Validate input
+    if(!ranks.includes(declared)){
+      alert("Invalid rank! Use 2-10, J, Q, K, A");
+      return;
+    }
+
+    // Enforce sequence only if requiredDeclared exists (not first move)
+    if(requiredDeclared && declared !== requiredDeclared){
+      alert(`You must declare the next rank: ${requiredDeclared}`);
+      return;
+    }
+
+    // Firebase transaction
     await lobbyRef.transaction(game=>{
       if(!game) return game;
-      if(game.currentTurn!==playerName) return game;
-      const hand=game.players[playerName].slice();
-      if(indices.some(i=>i<0||i>=hand.length)) return game;
-      const played=indices.map(i=>hand[i]);
-      game.players[playerName]=hand.filter((_,i)=>!indices.includes(i));
-      played.forEach(c=>game.pile.push({card:c, declared, player:playerName}));
-      if(game.players[playerName].length===0) game.winner=playerName;
-      const allPlayers=Object.keys(game.players).sort();
-      if(allPlayers.length>0){ let idx=allPlayers.indexOf(game.currentTurn); if(idx===-1) idx=0; game.currentTurn=allPlayers[(idx+1)%allPlayers.length]; } else game.currentTurn=null;
+      if(game.currentTurn !== playerName) return game;
+
+      const hand = (game.players && game.players[playerName]) ? game.players[playerName].slice() : [];
+      if(indices.some(i=>i<0 || i>=hand.length)) return game;
+
+      const played = indices.map(i => hand[i]);
+      game.players[playerName] = hand.filter((_,i)=>!indices.includes(i));
+
+      game.pile = game.pile || [];
+      played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
+
+      if(game.players[playerName].length === 0) game.winner = playerName;
+
+      const allPlayers = Object.keys(game.players).sort();
+      if(allPlayers.length > 0){
+        let idx = allPlayers.indexOf(game.currentTurn);
+        if(idx === -1) idx = 0;
+        game.currentTurn = allPlayers[(idx+1) % allPlayers.length];
+      } else game.currentTurn = null;
+
       return game;
     });
 
@@ -597,8 +685,12 @@
       const last=game.pile[game.pile.length-1];
       const pileCards=game.pile.map(p=>p.card);
       game.players=game.players||{};
-      if(last.card.slice(0,-1)===last.declared) game.players[playerName]=(game.players[playerName]||[]).concat(pileCards);
-      else game.players[last.player]=(game.players[last.player]||[]).concat(pileCards);
+      const lastCardRank = last.card ? last.card.slice(0,-1).toUpperCase().trim() : null;
+      const declaredRank = last.declared ? last.declared.toString().trim().toUpperCase() : null;
+      if(lastCardRank === declaredRank)
+        game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
+      else
+        game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
       game.pile=[];
       game.currentTurn=playerName;
       return game;
@@ -611,7 +703,7 @@
     if(!joined) return;
     await lobbyRef.child('players').child(playerName).remove();
 
-    // remove chat listener
+    // cleanup chat listener
     if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
     chatUnsub = null;
     chatRef = null;
@@ -699,7 +791,7 @@
       container.appendChild(div);
     });
 
-    // pile
+    // pile (show newest at top)
     const pileContainer=document.getElementById('pile-container');
     pileContainer.innerHTML='';
     pile.slice().reverse().forEach(p=>{
