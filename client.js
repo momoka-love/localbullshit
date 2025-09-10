@@ -255,7 +255,7 @@ async function callBS(){
     game.currentTurn = playerName;
     return game;
   });
-  showBullshitBanner("BULLSHIT called!");
+  showBullshitBanner("bullshit!");
 }
 
 // ---- Leave Lobby ----
@@ -287,6 +287,46 @@ async function sendChatMessage(){
   // push message
   await chatRef.push(msg);
   input.value = '';
+const chatRef = () => lobbyRef ? lobbyRef.child('chat') : null;
+
+function addChatMessage(msg) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-message';
+  div.innerHTML = `<strong>${msg.player}:</strong> ${msg.text}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// Listen for chat updates
+function initChat() {
+  if(!lobbyRef) return;
+  const ref = chatRef();
+  ref.on('child_added', snapshot => {
+    const msg = snapshot.val();
+    addChatMessage(msg);
+  });
+}
+
+// Send a message
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text || !lobbyRef) return;
+  const ref = chatRef();
+  ref.push({ player: playerName, text });
+  input.value = '';
+}
+
+document.getElementById('chat-send').onclick = sendMessage;
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if(e.key === 'Enter') sendMessage();
+});
+
+// Call initChat after joining lobby
+// Inside joinLobby(), after your lobbyUnsub setup:
+initChat();
+
 }
 
 // ---- Append chat message to UI ----
