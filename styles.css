@@ -145,10 +145,6 @@ button:disabled {
   border-radius: 0;
 }
 
-}
-
-}
-
 #site-notification {
   position: fixed;
   top: 10px;
@@ -160,7 +156,6 @@ button:disabled {
   border-radius: 8px;
   display: none;
   animation: fadeOut 3s forwards;
-  
 }
 
 /* Winner + Bullshit banners */
