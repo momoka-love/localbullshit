@@ -1,302 +1,270 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Bullshit Game</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #game-container-wrapper { display:none; }
-    #game-container, #pile-container, #players-list, #chat-container { margin-top: 10px; }
-    .card { display:inline-block; border:1px solid #000; padding:5px; margin:2px; cursor:pointer; }
-    .selected { background-color: yellow; }
-    .pile-card { margin:2px; }
-    #bs-banner { display:none; font-size:24px; font-weight:bold; color:red; margin:10px 0; }
-    #chat-container { border:1px solid #ccc; height:100px; overflow-y:scroll; padding:5px; }
-    .chat-message { margin:2px 0; }
-    button { margin:2px; }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bullshit!</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink-1: #fff0f6;
+    --pink-2: #ffd6e7;
+    --accent: #ff84b1;
+    --muted: #8f6b83;
+    --white: #ffffff;
+    --card-shadow: 0 8px 20px rgba(168, 92, 125, 0.12);
+  }
+
+  html, body {
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family: "Poppins", sans-serif;
+    background: linear-gradient(180deg, var(--pink-1), var(--pink-2));
+    color:#53324b;
+  }
+
+  .app {
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    box-sizing:border-box;
+  }
+
+  .card-shell{
+    width:100%;
+    max-width:1100px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.95));
+    border-radius:20px;
+    box-shadow: 0 12px 36px rgba(138,74,102,0.12);
+    padding:22px;
+    box-sizing:border-box;
+    backdrop-filter: blur(6px);
+  }
+
+  header.app-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:18px;
+  }
+
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo .mark{
+    width:56px; height:56px;
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; color:var(--white);
+    background: linear-gradient(135deg, #ff9cc7, #ff69a8);
+    box-shadow: 0 6px 18px rgba(255,105,168,0.2);
+    font-size:20px;
+  }
+  .logo h1{ margin:0; font-size:20px; color:#3a2140; }
+  .logo p{ margin:0; font-size:12px; color:var(--muted); }
+
+  #lobby-container{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+  .input-row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  input[type="text"]{
+    border:1px solid rgba(83,50,75,0.08);
+    padding:12px 14px; border-radius:10px; font-size:14px; width:200px;
+    background:transparent; outline:none;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  button{
+    background: linear-gradient(180deg, #ff79b3, #ff5b98);
+    color:white; border:none; padding:10px 14px; border-radius:10px;
+    font-weight:600; cursor:pointer;
+    box-shadow: 0 8px 20px rgba(255,105,168,0.12);
+  }
+  button.secondary{ background:transparent; color:#6a3b52; border:1px solid rgba(106,59,82,0.08); box-shadow:none; }
+
+  .board{
+    display:flex;
+    gap:18px;
+    align-items:flex-start;
+    justify-content:space-between;
+    flex-wrap:wrap;
+  }
+
+  .left{
+    flex:1 1 60%;
+    min-width:280px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
+    border-radius:14px;
+    padding:16px;
+    box-shadow: var(--card-shadow);
+  }
+
+  #game-container{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap:12px;
+    align-items:start;
+  }
+
+  .card{
+    background:white;
+    border-radius:12px;
+    padding:12px;
+    text-align:center;
+    font-weight:700;
+    font-size:18px;
+    color:#5b2a3f;
+    border:1px solid rgba(83,50,75,0.06);
+    box-shadow: 0 10px 26px rgba(153,86,120,0.08);
+    cursor:pointer;
+    user-select:none;
+    transition:transform .14s ease, box-shadow .14s ease, background .14s ease;
+  }
+  .card.selected{ transform:translateY(-8px) scale(1.04); box-shadow:0 18px 36px rgba(168,92,125,0.18); background:linear-gradient(180deg,#fff #fff6fb); border:1px solid rgba(255,105,168,0.22); }
+
+  .controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+
+  .right{
+    width:300px; min-width:260px;
+    display:flex; flex-direction:column; gap:12px;
+    max-height:80vh;
+  }
+
+  /* Debug toggle button */
+  #btn-debug {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    z-index: 10000;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+  #btn-debug:hover { opacity: 1; }
+
+  #bs-banner{ position:fixed; left:50%; transform:translateX(-50%); top:20px; background: linear-gradient(90deg,#ff89bb,#ff5aa0); color:white; padding:10px 18px; border-radius:20px; font-weight:700; display:none; box-shadow: 0 10px 30px rgba(255,90,140,0.18); z-index:9999; }
+
+  @media(max-width:800px){
+    .board{ flex-direction:column; }
+    .right{ width:100%; max-height:none; }
+    .top-right{ flex-direction:column; }
+  }
+</style>
 </head>
 <body>
-  <h1>Bullshit Game</h1>
-  <div id="lobby-container">
-    <input id="player-name" placeholder="Player name">
-    <input id="lobby-name" placeholder="Lobby name">
-    <button id="btn-join">Join</button>
+<!-- floating debug toggle -->
+<button id="btn-debug">Debug: OFF</button>
+
+<div id="bs-banner">bullshit!</div>
+<div class="app">
+  <div class="card-shell">
+    <header class="app-header">
+      <div class="logo">
+        <div class="mark">BS!</div>
+        <div>
+          <h1>bullshit!</h1>
+          <p>local lobby play</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button class="secondary" id="btn-leave">Leave</button>
+      </div>
+    </header>
+
+    <!-- LOBBY -->
+    <div id="lobby-container">
+      <div class="input-row">
+        <input id="player-name" type="text" placeholder="your name" />
+        <input id="lobby-name" type="text" placeholder="lobby name" />
+        <button id="btn-join">join lobby</button>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div id="game-container-wrapper" style="display:none;">
+      <div class="board">
+        <div class="left">
+          <div class="meta">
+            <div>
+              <div id="game-info">current turn: —</div>
+            </div>
+            <div style="text-align:right;">
+              <div>player hand</div>
+              <div id="player-name-display">—</div>
+            </div>
+          </div>
+          <div id="game-container" aria-live="polite"></div>
+          <div class="controls">
+            <button id="btn-play">play selected</button>
+            <button id="btn-draw" class="secondary">draw</button>
+            <button id="btn-bullshit">bullshit!</button>
+          </div>
+        </div>
+
+        <div class="right">
+          <!-- Top: Pile + Players -->
+          <div class="top-right">
+            <div class="pile-section">
+              <h3>Pile</h3>
+              <div id="pile-container"></div>
+            </div>
+            <div class="players-section">
+              <h3>Players</h3>
+              <ul id="players-list"></ul>
+            </div>
+          </div>
+
+          <!-- Bottom: Chat -->
+          <div class="chat-section">
+            <h3>Chat</h3>
+            <div id="chat-container">
+              <div id="chat-messages"></div>
+              <div id="chat-input-row">
+                <input type="text" id="chat-input" placeholder="type a message..." />
+                <button id="chat-send">send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
+</div>
 
-  <div id="game-container-wrapper">
-    <div id="game-info"></div>
-    <div id="game-container"></div>
-    <div id="pile-container"></div>
-    <ul id="players-list"></ul>
-    <div id="bs-banner"></div>
-    <button id="btn-play">Play Selected</button>
-    <button id="btn-draw">Draw</button>
-    <button id="btn-bullshit">Bullshit</button>
-    <button id="btn-leave">Leave</button>
-    <button id="btn-debug">Debug: OFF</button>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
+    authDomain: "bullshit-f4f8e.firebaseapp.com",
+    databaseURL: "https://bullshit-f4f8e-default-rtdb.firebaseio.com",
+    projectId: "bullshit-f4f8e",
+    storageBucket: "bullshit-f4f8e.appspot.com",
+    messagingSenderId: "497908378251",
+    appId: "1:497908378251:web:8f93b8a4d1d27539b2c28e"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    <h3>Chat</h3>
-    <div id="chat-container"></div>
-    <input id="chat-input" placeholder="Type message">
-    <button id="chat-send">Send</button>
-  </div>
+  let debugEnabled = false;
+  document.getElementById('btn-debug').onclick = () => {
+    debugEnabled = !debugEnabled;
+    firebase.database.enableLogging(debugEnabled);
+    document.getElementById('btn-debug').textContent = debugEnabled ? "Debug: ON" : "Debug: OFF";
+    console.log("Firebase debug logging:", debugEnabled ? "ON" : "OFF");
+  };
 
-  <script>
-    // --- Firebase setup ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
-      authDomain: "bullshit-f4f8e.firebaseapp.com",
-      databaseURL: "https://bullshit-f4f8e-default-rtdb.firebaseio.com",
-      projectId: "bullshit-f4f8e",
-      storageBucket: "bullshit-f4f8e.appspot.com",
-      messagingSenderId: "497908378251",
-      appId: "1:497908378251:web:8f93b8a4d1d27539b2c28e"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // --- Game variables ---
-    const suits = ['♠','♥','♦','♣'];
-    const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-
-    let playerName="", lobbyName="", lobbyRef=null;
-    let playerHand=[], pile=[], currentTurn="", joined=false;
-    let selectedCards = new Set();
-    let lobbyUnsub=null;
-    let chatRef=null;
-    let chatUnsub=null;
-    let debugEnabled = false;
-
-    // --- Utils ---
-    function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
-    function normalizeRank(r){ return r ? r.toString().trim().toUpperCase() : null; }
-    function getNextRank(lastRank){ 
-      if(!lastRank) return null; 
-      lastRank = normalizeRank(lastRank);
-      const idx = ranks.indexOf(lastRank);
-      if(idx===-1) return null;
-      return ranks[(idx+1)%ranks.length];
-    }
-    function showBullshitBanner(msg){
-      const banner = document.getElementById('bs-banner');
-      banner.textContent = msg;
-      banner.style.display = 'block';
-      setTimeout(()=>{ banner.style.display='none'; }, 2000);
-    }
-
-    // --- Join Lobby ---
-    async function joinLobby(){
-      playerName = document.getElementById('player-name').value.trim();
-      lobbyName = document.getElementById('lobby-name').value.trim();
-      if(!playerName || !lobbyName){ alert("Enter name and lobby"); return; }
-
-      lobbyRef = db.ref('lobbies/'+lobbyName);
-
-      await lobbyRef.transaction(game=>{
-        if(!game) game={players:{}, pile:[], currentTurn:playerName, winner:null};
-        game.players = game.players || {};
-        if(!game.players[playerName]) game.players[playerName] = Array.from({length:5},()=>randomCard());
-        playerHand = game.players[playerName].slice();
-        game.currentTurn = game.currentTurn || playerName;
-        return game;
-      });
-
-      joined = true;
-      document.getElementById('lobby-container').style.display='none';
-      document.getElementById('game-container-wrapper').style.display='block';
-
-      if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-      lobbyUnsub = lobbyRef.on('value', snapshot=>{
-        const game = snapshot.val()||{};
-        pile = game.pile||[];
-        currentTurn = game.currentTurn||"";
-        if(game.players && game.players[playerName]) playerHand = game.players[playerName].slice();
-        updateUI(game.players||{}, game.winner||null);
-        if(game.winner) showBullshitBanner(`${game.winner} wins!`);
-      });
-
-      chatRef = lobbyRef.child('chat');
-      if(chatUnsub) chatRef.off('child_added', chatUnsub);
-      chatUnsub = chatRef.on('child_added', snapshot=>{
-        appendChatMessage(snapshot.val());
-      });
-    }
-
-    // --- Toggle Card ---
-    function toggleCard(idx){
-      if(selectedCards.has(idx)) selectedCards.delete(idx);
-      else selectedCards.add(idx);
-      updateUI();
-    }
-
-    // --- Play Selected ---
-    async function playSelected(){
-      if(!joined || selectedCards.size===0 || currentTurn!==playerName) return;
-
-      const indices = [...selectedCards].sort((a,b)=>b-a);
-      const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
-      const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
-
-      let declared = prompt(
-        requiredDeclared ? `Declare next rank: ${requiredDeclared}` : `Declare any rank`,
-        requiredDeclared || playerHand[indices[0]].slice(0,-1)
-      );
-      if(!declared) return;
-      declared = declared.toUpperCase();
-      if(requiredDeclared && declared!==requiredDeclared){
-        alert(`You must declare: ${requiredDeclared}`);
-        return;
-      }
-
-      await lobbyRef.transaction(game=>{
-        if(!game || !game.players || game.currentTurn!==playerName) return game;
-        const hand = game.players[playerName];
-        const played = [];
-        for(const i of indices){
-          if(i>=0 && i<hand.length){
-            played.push(hand[i]);
-            hand.splice(i,1);
-          }
-        }
-        game.pile = game.pile || [];
-        played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
-        if(hand.length===0) game.winner = playerName;
-        const allPlayers = Object.keys(game.players).filter(p=>game.players[p].length>0);
-        if(allPlayers.length>0){
-          let idx = allPlayers.indexOf(playerName);
-          game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
-        } else game.currentTurn = null;
-        return game;
-      });
-
-      selectedCards.clear();
-    }
-
-    // --- Draw ---
-    async function drawCard(){
-      if(!joined || currentTurn!==playerName) return;
-      const newCard = randomCard();
-      await lobbyRef.child('players').child(playerName).transaction(hand=>{
-        hand = hand||[];
-        hand.push(newCard);
-        return hand;
-      });
-    }
-
-    // --- Call Bullshit ---
-    async function callBS(){
-      if(!joined || pile.length===0) return;
-      await lobbyRef.transaction(game=>{
-        if(!game || !game.pile || !game.players) return game;
-        const last = game.pile[game.pile.length-1];
-        const pileCards = game.pile.map(p=>p.card);
-        const lastRank = last.card.slice(0,-1).toUpperCase();
-        const declared = last.declared.toUpperCase();
-        if(lastRank===declared){
-          game.players[playerName] = (game.players[playerName]||[]).concat(pileCards);
-        } else {
-          game.players[last.player] = (game.players[last.player]||[]).concat(pileCards);
-        }
-        game.pile = [];
-        game.currentTurn = playerName;
-        return game;
-      });
-      showBullshitBanner("bullshit!");
-    }
-
-    // --- Leave Lobby ---
-    async function leaveLobby(){
-      if(!joined) return;
-      await lobbyRef.child('players').child(playerName).remove();
-      if(lobbyUnsub) lobbyRef.off('value', lobbyUnsub);
-      if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
-      joined=false;
-      playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
-      selectedCards.clear();
-      document.getElementById('game-container-wrapper').style.display='none';
-      document.getElementById('lobby-container').style.display='block';
-      updateUI();
-    }
-
-    // --- Chat ---
-    async function sendChatMessage(){
-      if(!joined || !chatRef) return;
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if(!text) return;
-      await chatRef.push({player:playerName, text, ts:Date.now()});
-      input.value='';
-    }
-    function appendChatMessage(msg){
-      const container = document.getElementById('chat-container');
-      if(!container) return;
-      const div = document.createElement('div');
-      div.className='chat-message';
-      div.textContent = `${msg.player}: ${msg.text}`;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // --- Update UI ---
-    function updateUI(players={}, winner=null){
-      const container = document.getElementById('game-container');
-      container.innerHTML='';
-      playerHand.forEach((c,i)=>{
-        const div = document.createElement('div');
-        div.textContent=c;
-        div.className='card';
-        if(selectedCards.has(i)) div.classList.add('selected');
-        div.onclick = ()=>toggleCard(i);
-        container.appendChild(div);
-      });
-      const pileContainer = document.getElementById('pile-container');
-      pileContainer.innerHTML='';
-      pile.forEach(p=>{
-        const div = document.createElement('div');
-        div.textContent = (p.player===playerName) ? `${p.card} (${p.declared})` : `${p.declared} (by ${p.player})`;
-        div.className='pile-card';
-        pileContainer.appendChild(div);
-      });
-      const list = document.getElementById('players-list');
-      list.innerHTML='';
-      Object.entries(players).forEach(([name,hand])=>{
-        const li = document.createElement('li');
-        li.textContent = `${name} - ${hand.length} card${hand.length!==1?'s':''}`;
-        if(name===currentTurn) li.style.fontWeight='bold';
-        if(hand.length===0) li.style.textDecoration='underline';
-        list.appendChild(li);
-      });
-      document.getElementById('game-info').textContent = `Current Turn: ${currentTurn}`;
-      document.getElementById('btn-play').disabled = !joined || currentTurn!==playerName || winner;
-      document.getElementById('btn-draw').disabled = !joined || currentTurn!==playerName || winner;
-      document.getElementById('btn-bullshit').disabled = !joined || pile.length===0 || winner;
-      const btn = document.getElementById('chat-send');
-      const input = document.getElementById('chat-input');
-      if(btn && input){ btn.disabled = !joined; input.disabled = !joined; }
-    }
-
-    // --- Event listeners ---
-    document.getElementById('btn-join').onclick = joinLobby;
-    document.getElementById('btn-play').onclick = playSelected;
-    document.getElementById('btn-draw').onclick = drawCard;
-    document.getElementById('btn-bullshit').onclick = callBS;
-    document.getElementById('btn-leave').onclick = leaveLobby;
-    document.getElementById('chat-send').onclick = sendChatMessage;
-    document.getElementById('chat-input').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChatMessage(); });
-
-    // Debug toggle
-    document.getElementById('btn-debug').onclick = () => {
-      debugEnabled = !debugEnabled;
-      firebase.database.enableLogging(debugEnabled);
-      document.getElementById('btn-debug').textContent = debugEnabled ? "Debug: ON" : "Debug: OFF";
-      console.log("Firebase debug logging:", debugEnabled ? "ON" : "OFF");
-    };
-
-    // --- Initialize UI ---
-    updateUI();
-  </script>
+  // ... keep the rest of your existing JS logic here ...
+</script>
 </body>
 </html>
