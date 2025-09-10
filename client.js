@@ -206,7 +206,18 @@ async function callBS(){
     game.currentTurn=playerName;
     return game;
   });
-  showNotification(`${playerName} called Bullshit!`);
+  if(msg.text.toLowerCase().includes("bullshit")) {
+  showNotification(`${msg.player} called Bullshit!`);
+
+  const bsBanner = document.getElementById('bs-banner');
+  bsBanner.style.display = 'block';
+  bsBanner.textContent = `💥 ${msg.player} says BULLSHIT! 💥`;
+
+  setTimeout(() => {
+    bsBanner.style.display = 'none';
+  }, 2000);
+}
+
 }
 
 // ---- Chat ----
