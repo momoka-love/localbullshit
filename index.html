@@ -67,6 +67,8 @@ button.secondary{background:transparent;border:1px solid var(--muted);color:var(
 <body>
 
 <div id="bs-banner"> BULLSHIT! </div>
+<div id="page-notification" style="display:none;"></div>
+
 
 <div class="app">
   <!-- LEFT PANEL -->
@@ -166,14 +168,19 @@ let playerHand=[], pile=[], currentTurn="", playerOrder=[], joined=false, select
 /* -------------------------
    UI helpers
 ------------------------- */
-function showNotification(msg){
-  const n=document.getElementById('site-notification');
-  n.textContent=msg; n.style.display='block';
-  setTimeout(()=>{n.style.display='none';},3000);
-  const banner=document.getElementById('bs-banner');
-  if(msg.toLowerCase().includes('bullshit')){
-    banner.style.display='block';
-    setTimeout(()=>banner.style.display='none',2000);
+function showNotification(msg, duration = 3000){
+  const n = document.getElementById('page-notification');
+  if(!n) return;
+  n.textContent = msg;
+  n.style.display = 'block';
+  n.classList.add('show');
+
+  setTimeout(() => {
+    n.classList.remove('show');
+    setTimeout(()=> n.style.display='none', 300); // wait for transition
+  }, duration);
+}
+
   }
 }
 function setJoinState(isJoined){
