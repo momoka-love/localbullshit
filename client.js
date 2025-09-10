@@ -75,32 +75,65 @@ function toggleCard(idx){
 }
 
 // ---- Play Selected ----
+// ---- Play Selected ----
 async function playSelected(){
-  if(!joined||selectedCards.size===0||currentTurn!==playerName) return;
-  const indices=[...selectedCards].sort((a,b)=>a-b);
-  const cardsPreview=indices.map(i=>playerHand[i]);
-  const lastDeclared=pile.length?pile[pile.length-1].declared:null;
-  const requiredDeclared=getNextRank(lastDeclared);
-  let declared=prompt(`Declare rank:`, requiredDeclared || cardsPreview[0].slice(0,-1)) || requiredDeclared;
-  declared=declared.trim();
-  if(requiredDeclared && declared!==requiredDeclared){ alert(`Must declare ${requiredDeclared}`); return; }
+  if(!joined || selectedCards.size===0 || currentTurn!==playerName) return;
+  const indices = [...selectedCards].sort((a,b)=>a-b);
+  const cardsPreview = indices.map(i=>playerHand[i]);
 
+  // Determine the required declared rank for this turn
+  const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
+  const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
+
+  // Prompt the player
+  let declared = prompt(
+    requiredDeclared 
+      ? `You must declare the next rank: ${requiredDeclared}` 
+      : `Declare any rank to start the sequence`,
+    requiredDeclared || cardsPreview[0].slice(0,-1)
+  );
+  if(!declared) return; // cancel
+  declared = declared.trim().toUpperCase();
+
+  // Validate input
+  if(!ranks.includes(declared)){
+    alert("Invalid rank! Use 2-10, J, Q, K, A");
+    return;
+  }
+
+  // Enforce sequence for all but first move
+  if(requiredDeclared && declared !== requiredDeclared){
+    alert(`You must declare the next rank: ${requiredDeclared}`);
+    return;
+  }
+
+  // Update game state in Firebase
   await lobbyRef.transaction(game=>{
     if(!game) return game;
-    if(game.currentTurn!==playerName) return game;
-    const hand=game.players[playerName].slice();
-    if(indices.some(i=>i<0||i>=hand.length)) return game;
-    const played=indices.map(i=>hand[i]);
-    game.players[playerName]=hand.filter((_,i)=>!indices.includes(i));
-    played.forEach(c=>game.pile.push({card:c, declared, player:playerName}));
-    if(game.players[playerName].length===0) game.winner=playerName;
-    const allPlayers=Object.keys(game.players).sort();
-    if(allPlayers.length>0){ let idx=allPlayers.indexOf(game.currentTurn); if(idx===-1) idx=0; game.currentTurn=allPlayers[(idx+1)%allPlayers.length]; } else game.currentTurn=null;
+    if(game.currentTurn !== playerName) return game;
+
+    const hand = game.players[playerName].slice();
+    if(indices.some(i=>i<0 || i>=hand.length)) return game;
+
+    const played = indices.map(i=>hand[i]);
+    game.players[playerName] = hand.filter((_,i)=>!indices.includes(i));
+    played.forEach(c => game.pile.push({card:c, declared, player:playerName}));
+
+    if(game.players[playerName].length===0) game.winner = playerName;
+
+    const allPlayers = Object.keys(game.players).sort();
+    if(allPlayers.length > 0){
+      let idx = allPlayers.indexOf(game.currentTurn);
+      if(idx === -1) idx = 0;
+      game.currentTurn = allPlayers[(idx+1)%allPlayers.length];
+    } else game.currentTurn = null;
+
     return game;
   });
 
   selectedCards.clear();
 }
+
 
 // ---- Draw Card ----
 async function drawCard(){
