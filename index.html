@@ -280,7 +280,7 @@
   </style>
 </head>
 <body>
-  <div id="bs-banner">Bullshit!</div>
+  <div id="bs-banner">bullshit!</div>
 
   <div class="app">
     <div class="card-shell">
@@ -289,13 +289,13 @@
         <div class="logo">
           <div class="mark">BS!</div>
           <div>
-            <h1>Bullshit!</h1>
+            <h1>bullshit!</h1>
             <p>local lobby play (same wi-fi required!)</p>
           </div>
         </div>
 
         <div style="display:flex;gap:12px;align-items:center;">
-          <div style="font-size:13px;color:var(--muted)">Aesthetic UI</div>
+          <div style="font-size:13px;color:var(--muted)">made by lily</div>
           <button class="secondary" id="btn-leave" title="Leave lobby (also used in-game)">Leave</button>
         </div>
       </header>
@@ -303,13 +303,13 @@
       <!-- LOBBY -->
       <div id="lobby-container">
         <div class="input-row">
-          <input id="player-name" type="text" placeholder="Your name (e.g. Rosie)" />
-          <input id="lobby-name" type="text" placeholder="Lobby name (e.g. pink-room)" />
-          <button id="btn-join">Join Lobby</button>
+          <input id="player-name" type="text" placeholder="your name (e.g. grace)" />
+          <input id="lobby-name" type="text" placeholder="lobby name (e.g. howqua)" />
+          <button id="btn-join">join lobby</button>
         </div>
 
         <div style="color:var(--muted);font-size:13px;">
-          Tip: Use a short lobby name to share with friends.
+          tip: use a short lobby name to share with friends.
         </div>
       </div>
 
@@ -319,12 +319,12 @@
           <div class="left">
             <div class="meta">
               <div style="display:flex;flex-direction:column;">
-                <div id="game-info" style="font-weight:700">Current Turn: —</div>
-                <div style="font-size:13px;color:var(--muted);margin-top:6px;">Click your cards to select, then Play.</div>
+                <div id="game-info" style="font-weight:700">current turn: —</div>
+                <div style="font-size:13px;color:var(--muted);margin-top:6px;">click your cards to select, then play.</div>
               </div>
 
               <div style="text-align:right;">
-                <div style="font-size:13px;color:var(--muted);">Player Hand</div>
+                <div style="font-size:13px;color:var(--muted);">player hand</div>
                 <div style="font-weight:700;font-size:18px;" id="player-name-display">—</div>
               </div>
             </div>
@@ -334,19 +334,19 @@
             </div>
 
             <div class="controls">
-              <button id="btn-play">Play Selected</button>
-              <button id="btn-draw" class="secondary">Draw</button>
-              <button id="btn-bullshit">BULLSHIT!</button>
+              <button id="btn-play">play selected</button>
+              <button id="btn-draw" class="secondary">draw</button>
+              <button id="btn-bullshit">bullshit!</button>
             </div>
           </div>
 
           <div class="right">
-            <h3 style="margin-top:0;margin-bottom:8px;">Pile</h3>
+            <h3 style="margin-top:0;margin-bottom:8px;">pile</h3>
             <div id="pile-container" class="pile-box">
               <!-- pile items here -->
             </div>
 
-            <h3 style="margin-top:16px;margin-bottom:8px;">Players</h3>
+            <h3 style="margin-top:16px;margin-bottom:8px;">players</h3>
             <ul id="players-list">
               <!-- players -->
             </ul>
@@ -436,7 +436,7 @@
         if(game.winner) showBullshitBanner(`${game.winner} wins!`);
       });
 
-    }catch(err){ console.error(err); alert("Failed to join: "+err.message);}
+    }catch(err){ console.error(err); alert("failed to join: "+err.message);}
   }
 
   // ---- Toggle Card ----
@@ -453,9 +453,9 @@
     const cardsPreview=indices.map(i=>playerHand[i]);
     const lastDeclared=pile.length?pile[pile.length-1].declared:null;
     const requiredDeclared=getNextRank(lastDeclared);
-    let declared=prompt(`Declare rank:`, requiredDeclared || cardsPreview[0].slice(0,-1)) || requiredDeclared;
+    let declared=prompt(`declare rank:`, requiredDeclared || cardsPreview[0].slice(0,-1)) || requiredDeclared;
     declared=declared.trim();
-    if(requiredDeclared && declared!==requiredDeclared){ alert(`Must declare ${requiredDeclared}`); return; }
+    if(requiredDeclared && declared!==requiredDeclared){ alert(`u have to declare ${requiredDeclared}`); return; }
 
     await lobbyRef.transaction(game=>{
       if(!game) return game;
@@ -495,7 +495,7 @@
       game.currentTurn=playerName;
       return game;
     });
-    showBullshitBanner("BULLSHIT!");
+    showBullshitBanner("bullshit!");
   }
 
   // ---- Leave Lobby ----
