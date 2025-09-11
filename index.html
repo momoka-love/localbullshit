@@ -6,235 +6,447 @@
 <title>bullshit!</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 <style>
-  /* --- Styles same as before (UI + debug) --- */
-  :root{
-    --pink-1: #fff0f6;
-    --pink-2: #ffd6e7;
-    --accent: #ff84b1;
-    --muted: #8f6b83;
-    --white: #ffffff;
-    --card-shadow: 0 8px 20px rgba(168, 92, 125, 0.12);
-  }
-  html, body { margin:0; padding:0; height:100%; font-family:"Poppins",sans-serif; background:linear-gradient(180deg,var(--pink-1),var(--pink-2)); color:#53324b; }
-  .app { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-  .card-shell{ width:100%; max-width:1100px; background:rgba(255,255,255,0.9); border-radius:20px; padding:22px; }
-  header.app-header{ display:flex; justify-content:space-between; align-items:center; }
-  .logo{ display:flex; gap:12px; align-items:center; }
-  .logo .mark{ width:56px; height:56px; border-radius:12px; background:#ff69a8; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; }
-  #lobby-container{ margin:20px 0; }
-  input{ padding:8px; border-radius:8px; border:1px solid #ccc; }
-  button{ padding:10px 14px; border:none; border-radius:10px; cursor:pointer; background:#ff69a8; color:white; font-weight:600; }
-  button.secondary{ background:#ddd; color:#333; }
-  .board{ display:flex; gap:18px; flex-wrap:wrap; }
-  .left{ flex:1 1 60%; background:white; border-radius:14px; padding:16px; }
-  #game-container{ display:flex; flex-wrap:wrap; gap:10px; }
-  .card{ background:#fff; border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; }
-  .card.selected{ background:#ffe6f0; border:2px solid #ff69a8; }
-  .controls{ margin-top:12px; display:flex; gap:8px; }
-  .right{ flex:1 1 30%; }
-  #btn-debug{ position:fixed; top:10px; right:10px; background:#333; color:#fff; padding:8px 14px; border-radius:6px; z-index:10000; }
-  #debug-panel{ position:fixed; bottom:0; left:0; width:100%; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.85); color:#0f0; font-family:monospace; font-size:12px; padding:4px; z-index:10000; display:none; }
-  #bs-banner{ position:fixed; left:50%; transform:translateX(-50%); top:20px; background:#ff5aa0; color:white; padding:10px 18px; border-radius:20px; font-weight:700; display:none; z-index:9999; }
+/* ---------- Your styles (kept mostly as provided) ---------- */
+:root{ --pink-1:#fff0f6; --pink-2:#ffd6e7; --accent:#ff84b1; --muted:#8f6b83; --white:#ffffff; --card-shadow:0 8px 20px rgba(168,92,125,0.12);}
+html,body{margin:0;padding:0;height:100%;font-family:"Poppins",sans-serif;background:linear-gradient(180deg,var(--pink-1),var(--pink-2));color:#53324b;}
+.app{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+.card-shell{width:100%;max-width:1100px;background:linear-gradient(180deg,rgba(255,255,255,0.85),rgba(255,255,255,0.95));border-radius:20px;padding:22px;box-sizing:border-box;backdrop-filter: blur(6px);box-shadow:0 12px 36px rgba(138,74,102,0.12);}
+header.app-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo .mark{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--white);background:linear-gradient(135deg,#ff9cc7,#ff69a8);box-shadow:0 6px 18px rgba(255,105,168,0.2);font-size:20px;}
+.logo h1{margin:0;font-size:20px;color:#3a2140;}
+.logo p{margin:0;font-size:12px;color:var(--muted);}
+#lobby-container{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:18px;}
+.input-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+input[type="text"]{border:1px solid rgba(83,50,75,0.08);padding:12px 14px;border-radius:10px;font-size:14px;width:200px;background:transparent;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
+button{background:linear-gradient(180deg,#ff79b3,#ff5b98);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:600;cursor:pointer;box-shadow:0 8px 20px rgba(255,105,168,0.12);}
+button.secondary{background:transparent;color:#6a3b52;border:1px solid rgba(106,59,82,0.08);box-shadow:none;}
+.board{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;}
+.left{flex:1 1 60%;min-width:280px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.9));border-radius:14px;padding:16px;box-shadow:var(--card-shadow);}
+#game-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:12px;align-items:start;}
+.card{background:white;border-radius:12px;padding:12px;text-align:center;font-weight:700;font-size:18px;color:#5b2a3f;border:1px solid rgba(83,50,75,0.06);box-shadow:0 10px 26px rgba(153,86,120,0.08);cursor:pointer;user-select:none;transition:transform .14s ease,box-shadow .14s ease,background .14s ease;}
+.card.selected{transform:translateY(-8px) scale(1.04);box-shadow:0 18px 36px rgba(168,92,125,0.18);background:linear-gradient(180deg,#fff #fff6fb);border:1px solid rgba(255,105,168,0.22);}
+.controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.right{width:300px;min-width:260px;display:flex;flex-direction:column;gap:12px;max-height:80vh;}
+.top-right{display:flex;gap:12px;flex:0 0 auto;}
+.pile-section,.players-section{flex:1;display:flex;flex-direction:column;gap:4px;}
+#pile-container,#players-list{overflow-y:auto;max-height:150px;padding:8px;border-radius:8px;background:#fdf0f6;}
+#players-list{list-style:none;margin:0;padding:0;}
+.chat-section{flex:1 1 auto;display:flex;flex-direction:column;min-height:150px;}
+#chat-container{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(83,50,75,0.08);border-radius:12px;}
+#chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:5px;font-size:13px;color:#513144;}
+.chat-message{background:white;padding:6px 10px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.06);}
+#chat-input-row{display:flex;border-top:1px solid rgba(83,50,75,0.08);}
+#chat-input-row input{flex:1;border:none;outline:none;background:transparent;padding:10px;}
+#chat-input-row button{padding:0 15px;border:none;background:#ff79b3;color:white;font-weight:600;cursor:pointer;}
+#bs-banner{position:fixed;left:50%;transform:translateX(-50%);top:20px;background:linear-gradient(90deg,#ff89bb,#ff5aa0);color:white;padding:10px 18px;border-radius:20px;font-weight:700;display:none;box-shadow:0 10px 30px rgba(255,90,140,0.18);z-index:9999;}
+@media(max-width:800px){.board{flex-direction:column;} .right{width:100%;max-height:none;} .top-right{flex-direction:column;}}
+
+/* debug overlay removed */
 </style>
 </head>
 <body>
-<button id="btn-debug">debug: off</button>
-<div id="debug-panel"></div>
 <div id="bs-banner">bullshit!</div>
-
 <div class="app">
   <div class="card-shell">
     <header class="app-header">
-      <div class="logo"><div class="mark">BS!</div><h1>Bullshit!</h1></div>
-      <button class="secondary" id="btn-leave">Leave</button>
+      <div class="logo">
+        <div class="mark">BS!</div>
+        <div>
+          <h1>bullshit!</h1>
+          <p>local lobby play</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button class="secondary" id="btn-leave">leave</button>
+      </div>
     </header>
 
+    <!-- LOBBY -->
     <div id="lobby-container">
-      <input id="player-name" type="text" placeholder="your name">
-      <input id="lobby-name" type="text" placeholder="lobby name">
-      <button id="btn-join">join lobby</button>
+      <div class="input-row">
+        <input id="player-name" type="text" placeholder="your name" />
+        <input id="lobby-name" type="text" placeholder="lobby name" />
+        <button id="btn-join">join lobby</button>
+      </div>
     </div>
 
+    <!-- GAME -->
     <div id="game-container-wrapper" style="display:none;">
       <div class="board">
         <div class="left">
-          <div id="game-info">current Turn: —</div>
-          <div id="game-container"></div>
+          <div class="meta" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div><div id="game-info">current turn: —</div></div>
+            <div style="text-align:right;"><div>player hand</div><div id="player-name-display">—</div></div>
+          </div>
+          <div id="game-container" aria-live="polite"></div>
           <div class="controls">
-            <button id="btn-play">play</button>
+            <button id="btn-play">play selected</button>
             <button id="btn-draw" class="secondary">draw</button>
             <button id="btn-bullshit">bullshit!</button>
           </div>
         </div>
+
         <div class="right">
-          <h3>pile</h3><div id="pile-container"></div>
-          <h3>players</h3><ul id="players-list"></ul>
-          <h3>chat</h3>
-          <div id="chat-container"></div>
-          <input id="chat-input" placeholder="type message"><button id="chat-send">send</button>
+          <div class="top-right">
+            <div class="pile-section">
+              <h3 style="margin:0 0 6px 0;">Pile</h3>
+              <div id="pile-container"></div>
+            </div>
+            <div class="players-section">
+              <h3 style="margin:0 0 6px 0;">Players</h3>
+              <ul id="players-list"></ul>
+            </div>
+          </div>
+
+          <div class="chat-section">
+            <h3 style="margin:6px 0;">chat</h3>
+            <div id="chat-container">
+              <div id="chat-messages"></div>
+              <div id="chat-input-row">
+                <input type="text" id="chat-input" placeholder="display your rage..." />
+                <button id="chat-send">send</button>
+              </div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
 </div>
 
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script>
-/* ---------------- Debug Setup ---------------- */
-let debugEnabled = false;
-function debugLog(...args){
-  if(!debugEnabled) return;
-  const panel=document.getElementById('debug-panel');
-  panel.style.display='block';
-  const msg=document.createElement('div');
-  msg.textContent=args.map(a=>typeof a==="object"?JSON.stringify(a):a).join(" ");
-  panel.appendChild(msg);
-  panel.scrollTop=panel.scrollHeight;
-}
-window.onerror=(msg,src,line,col)=>{debugLog("ERROR:",msg,"at",line+":"+col);};
-document.getElementById('btn-debug').onclick=()=>{
-  debugEnabled=!debugEnabled;
-  firebase.database.enableLogging(debugEnabled?debugLog:false);
-  document.getElementById('btn-debug').textContent=debugEnabled?"debug: on":"debug: off";
-  debugLog("debug logging is now",debugEnabled?"on":"ogg");
-};
 
-/* ---------------- Firebase Init ---------------- */
-const firebaseConfig={
-  apiKey:"AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
-  authDomain:"bullshit-f4f8e.firebaseapp.com",
-  databaseURL:"https://bullshit-f4f8e-default-rtdb.firebaseio.com",
-  projectId:"bullshit-f4f8e",
-  storageBucket:"bullshit-f4f8e.appspot.com",
-  messagingSenderId:"497908378251",
-  appId:"1:497908378251:web:8f93b8a4d1d27539b2c28e"
+<script>
+/* ---------- Consolidated & cleaned client JS (debug output removed) ---------- */
+
+// Replace with your config (kept as provided)
+const firebaseConfig = {
+  apiKey: "AIzaSyDuRUwCmQCoSJTMvwqaY4Hj-SPv4WCHWpQ",
+  authDomain: "bullshit-f4f8e.firebaseapp.com",
+  databaseURL: "https://bullshit-f4f8e-default-rtdb.firebaseio.com",
+  projectId: "bullshit-f4f8e",
+  storageBucket: "bullshit-f4f8e.appspot.com",
+  messagingSenderId: "497908378251",
+  appId: "1:497908378251:web:8f93b8a4d1d27539b2c28e"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
+// firebase.database.enableLogging(true); // removed to silence SDK logs in console
 
-/* ---------------- Game Logic ---------------- */
-const suits=['♠','♥','♦','♣'];
-const ranks=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-let playerName="",lobbyName="",lobbyRef=null,playerHand=[],pile=[],currentTurn="",joined=false,selectedCards=new Set(),lobbyUnsub=null,chatRef=null,chatUnsub=null;
+// Provide a no-op logger so existing dlog(...) calls don't produce output.
+// If you want logging again, replace with a simple console wrapper.
+function dlog(){}
 
-function randomCard(){return ranks[Math.floor(Math.random()*ranks.length)]+suits[Math.floor(Math.random()*suits.length)];}
-function getNextRank(last){const idx=ranks.indexOf(last);return idx===-1?null:ranks[(idx+1)%ranks.length];}
-function showBullshitBanner(msg){const b=document.getElementById('bs-banner');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',2000);}
+/* Game state */
+const suits = ['♠','♥','♦','♣'];
+const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 
+let playerName = '', lobbyName = '', lobbyRef = null;
+let playerHand = [], pile = [], currentTurn = '', joined = false;
+let selectedCards = new Set();
+let lobbyUnsub = null;
+let chatRef = null, chatUnsub = null;
+
+function randomCard(){ return ranks[Math.floor(Math.random()*ranks.length)] + suits[Math.floor(Math.random()*suits.length)]; }
+function normalizeRank(r){ return r ? r.toString().trim().toUpperCase() : null; }
+function getNextRank(lastRank){ if(!lastRank) return null; lastRank = normalizeRank(lastRank); const idx = ranks.indexOf(lastRank); if(idx===-1) return null; return ranks[(idx+1)%ranks.length]; }
+
+function showBullshitBanner(msg){
+  const banner = document.getElementById('bs-banner');
+  if(!banner) return;
+  banner.textContent = msg;
+  banner.style.display = 'block';
+  setTimeout(()=>{ banner.style.display='none'; }, 2000);
+}
+
+/* Chat helpers */
+function initChatListeners(){
+  if(!lobbyRef) return;
+  chatRef = lobbyRef.child('chat');
+  if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
+  chatUnsub = chatRef.on('child_added', snap => {
+    const msg = snap.val();
+    addChatMessage(msg);
+  });
+}
+function addChatMessage(msg){
+  const container = document.getElementById('chat-messages');
+  if(!container) return;
+  const div = document.createElement('div');
+  div.className = 'chat-message';
+  div.innerHTML = `<strong>${msg.player}:</strong> ${msg.text}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+async function sendChat(){
+  if(!joined || !chatRef) return;
+  const input = document.getElementById('chat-input');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  try {
+    await chatRef.push({player:playerName, text, ts:Date.now()});
+    input.value = '';
+  } catch(e){
+    dlog('chat push error', e);
+  }
+}
+
+/* JOIN */
 async function joinLobby(){
-  playerName=document.getElementById('player-name').value.trim();
-  lobbyName=document.getElementById('lobby-name').value.trim();
-  if(!playerName||!lobbyName){alert("Enter name and lobby");return;}
-  lobbyRef=db.ref('lobbies/'+lobbyName);
-  await lobbyRef.transaction(game=>{
-    if(!game)game={players:{},pile:[],currentTurn:playerName,winner:null};
-    if(!game.players[playerName])game.players[playerName]=Array.from({length:5},()=>randomCard());
-    return game;
-  });
-  joined=true;
-  document.getElementById('lobby-container').style.display='none';
-  document.getElementById('game-container-wrapper').style.display='block';
-  if(lobbyUnsub) lobbyRef.off('value',lobbyUnsub);
-  lobbyUnsub=lobbyRef.on('value',snap=>{
-    const game=snap.val()||{};
-    pile=game.pile||[]; currentTurn=game.currentTurn||"";
-    if(game.players&&game.players[playerName])playerHand=game.players[playerName];
-    updateUI(game.players||{},game.winner);
-    if(game.winner)showBullshitBanner(`${game.winner} wins!`);
-  });
-  chatRef=lobbyRef.child('chat');
-  if(chatUnsub)chatRef.off('child_added',chatUnsub);
-  chatUnsub=chatRef.on('child_added',snap=>appendChatMessage(snap.val()));
+  try {
+    const pn = (document.getElementById('player-name').value || '').trim();
+    const ln = (document.getElementById('lobby-name').value || '').trim();
+    if(!pn || !ln){ alert('Enter name and lobby'); return; }
+    playerName = pn; lobbyName = ln;
+    lobbyRef = db.ref('lobbies/' + lobbyName);
+    dlog('joining lobby', {playerName, lobbyName});
+
+    await lobbyRef.transaction(game => {
+      if(!game) game = {players:{}, pile:[], currentTurn: playerName, winner: null};
+      game.players = game.players || {};
+      if(!game.players[playerName]) game.players[playerName] = Array.from({length:5}, () => randomCard());
+      game.currentTurn = game.currentTurn || playerName;
+      return game;
+    });
+
+    joined = true;
+    document.getElementById('lobby-container').style.display = 'none';
+    document.getElementById('game-container-wrapper').style.display = 'block';
+    document.getElementById('player-name-display').textContent = playerName;
+
+    // attach main snapshot listener
+    if(lobbyUnsub && lobbyRef) lobbyRef.off('value', lobbyUnsub);
+    lobbyUnsub = lobbyRef.on('value', snap => {
+      const game = snap.val() || {};
+      pile = game.pile || [];
+      currentTurn = game.currentTurn || '';
+      if(game.players && game.players[playerName]) playerHand = game.players[playerName].slice();
+      updateUI(game.players || {}, game.winner || null);
+      if(game.winner) showBullshitBanner(`${game.winner} wins!`);
+      dlog('snapshot', {players: Object.keys(game.players||{}), currentTurn, pileSize: pile.length});
+    });
+
+    // init chat listeners
+    initChatListeners();
+
+    updateUI();
+    dlog('joined lobby ok');
+  } catch(e){
+    dlog('joinLobby failed', e);
+    alert('Failed to join lobby.');
+  }
 }
 
-function toggleCard(i){if(selectedCards.has(i))selectedCards.delete(i);else selectedCards.add(i);updateUI();}
+/* PLAY */
 async function playSelected(){
-  if(!joined||selectedCards.size===0||currentTurn!==playerName)return;
-  const indices=[...selectedCards].sort((a,b)=>b-a);
-  const last=pile.length?pile[pile.length-1].declared:null;
-  const required=last?getNextRank(last):null;
-  let declared=prompt(required?`Declare ${required}`:"Declare rank",required||playerHand[indices[0]].slice(0,-1));
-  if(!declared)return;
-  declared=declared.toUpperCase();
-  if(required&&declared!==required){alert(`You must declare ${required}`);return;}
-  await lobbyRef.transaction(game=>{
-    if(!game||game.currentTurn!==playerName)return game;
-    const hand=game.players[playerName]; const played=[];
-    indices.forEach(i=>{if(i>=0&&i<hand.length){played.push(hand[i]);hand.splice(i,1);}});
-    played.forEach(c=>game.pile.push({card:c,declared,player:playerName}));
-    if(hand.length===0)game.winner=playerName;
-    const players=Object.keys(game.players);
-    let idx=players.indexOf(playerName);
-    game.currentTurn=players[(idx+1)%players.length];
-    return game;
-  });
+  dlog('playSelected', {joined, selected: selectedCards.size, currentTurn, playerName});
+  if(!joined){ dlog('not joined'); return; }
+  if(selectedCards.size === 0){ dlog('no cards selected'); return; }
+  if(currentTurn !== playerName){ dlog('not your turn'); return; }
+  if(!lobbyRef) { dlog('missing lobbyRef'); return; }
+
+  const indices = [...selectedCards].sort((a,b)=>b-a);
+  const lastDeclared = pile.length ? pile[pile.length-1].declared : null;
+  const requiredDeclared = lastDeclared ? getNextRank(lastDeclared) : null;
+
+  let defaultRank = '';
+  if(playerHand[indices[0]]) defaultRank = playerHand[indices[0]].slice(0,-1);
+  let declared = prompt(requiredDeclared ? `Declare next rank: ${requiredDeclared}` : `Declare any rank`, requiredDeclared || defaultRank);
+  if(!declared) return;
+  declared = declared.toUpperCase();
+  if(requiredDeclared && declared !== requiredDeclared){ alert(`You must declare: ${requiredDeclared}`); return; }
+
+  try {
+    await lobbyRef.transaction(game => {
+      if(!game || !game.players || game.currentTurn !== playerName) return game;
+      const hand = game.players[playerName] || [];
+      const played = [];
+      for(const i of indices){
+        if(i>=0 && i<hand.length){
+          played.push(hand[i]);
+          hand.splice(i,1);
+        }
+      }
+      game.pile = game.pile || [];
+      played.forEach(c => game.pile.push({card:c, declared, player: playerName}));
+      if((hand||[]).length === 0) game.winner = playerName;
+      // next player with cards
+      const allPlayers = Object.keys(game.players).filter(p => (game.players[p]||[]).length > 0);
+      if(allPlayers.length > 0){
+        const idx = allPlayers.indexOf(playerName);
+        game.currentTurn = allPlayers[(idx+1) % allPlayers.length];
+      } else {
+        game.currentTurn = null;
+      }
+      return game;
+    });
+    dlog('play transaction succeeded');
+  } catch(e){ dlog('play transaction failed', e); }
   selectedCards.clear();
 }
+
+/* DRAW */
 async function drawCard(){
-  if(!joined||currentTurn!==playerName)return;
-  const card=randomCard();
-  await lobbyRef.child('players').child(playerName).transaction(h=>(h||[]).concat(card));
+  dlog('drawCard', {joined, currentTurn, playerName});
+  if(!joined){ dlog('not joined'); return; }
+  if(currentTurn !== playerName){ dlog('not your turn'); return; }
+  if(!lobbyRef){ dlog('missing lobbyRef'); return; }
+  const newCard = randomCard();
+  try {
+    await lobbyRef.child('players').child(playerName).transaction(hand => {
+      hand = hand || [];
+      hand.push(newCard);
+      return hand;
+    });
+    dlog('drew', newCard);
+  } catch(e){ dlog('draw failed', e); }
 }
+
+/* BULLSHIT */
 async function callBS(){
-  if(!joined||pile.length===0)return;
-  await lobbyRef.transaction(game=>{
-    if(!game||!game.pile)return game;
-    const last=game.pile[game.pile.length-1];
-    const pileCards=game.pile.map(p=>p.card);
-    if(last.card.slice(0,-1).toUpperCase()===last.declared.toUpperCase()){
-      game.players[playerName]=game.players[playerName].concat(pileCards);
-    } else {
-      game.players[last.player]=game.players[last.player].concat(pileCards);
-    }
-    game.pile=[]; game.currentTurn=playerName; return game;
-  });
-  showBullshitBanner("bullshit!");
+  dlog('callBS', {joined, pileLength: pile.length});
+  if(!joined || pile.length === 0){ dlog('cannot call bs'); return; }
+  if(!lobbyRef){ dlog('missing lobbyRef'); return; }
+  try {
+    await lobbyRef.transaction(game => {
+      if(!game || !game.pile || !game.players) return game;
+      const last = game.pile[game.pile.length - 1];
+      const pileCards = game.pile.map(p => p.card);
+      const lastRank = (last.card.slice(0, -1) || '').toUpperCase();
+      const declared = (last.declared || '').toUpperCase();
+      if(lastRank === declared){
+        // caller wrong
+        game.players[playerName] = (game.players[playerName] || []).concat(pileCards);
+      } else {
+        // last player lied
+        game.players[last.player] = (game.players[last.player] || []).concat(pileCards);
+      }
+      game.pile = [];
+      game.currentTurn = playerName;
+      return game;
+    });
+    showBullshitBanner('bullshit!');
+    dlog('callBS done');
+  } catch(e){ dlog('callBS failed', e); }
 }
+
+/* LEAVE */
 async function leaveLobby(){
-  if(!joined)return;
-  await lobbyRef.child('players').child(playerName).remove();
-  if(lobbyUnsub) lobbyRef.off('value',lobbyUnsub);
-  if(chatUnsub) chatRef.off('child_added',chatUnsub);
-  joined=false; playerName=""; lobbyName=""; playerHand=[]; pile=[]; currentTurn="";
+  dlog('leaveLobby start', {joined});
+  try {
+    if(!joined || !lobbyRef){ dlog('not joined or no lobby'); cleanupLocal(); return; }
+
+    // remove player from server list (best-effort)
+    try { await lobbyRef.child('players').child(playerName).remove(); } catch(e){ dlog('error removing player', e); }
+
+    // detach listeners
+    if(lobbyUnsub && lobbyRef) lobbyRef.off('value', lobbyUnsub);
+    lobbyUnsub = null;
+    if(chatUnsub && chatRef) chatRef.off('child_added', chatUnsub);
+    chatUnsub = null;
+    lobbyRef = null;
+    chatRef = null;
+
+    cleanupLocal();
+    dlog('left lobby');
+  } catch(e){
+    dlog('leaveLobby failed', e);
+  }
+}
+function cleanupLocal(){
+  joined = false;
+  playerName = '';
+  lobbyName = '';
+  playerHand = [];
+  pile = [];
+  currentTurn = '';
   selectedCards.clear();
-  document.getElementById('game-container-wrapper').style.display='none';
-  document.getElementById('lobby-container').style.display='block';
+  document.getElementById('game-container-wrapper').style.display = 'none';
+  document.getElementById('lobby-container').style.display = 'block';
+  document.getElementById('player-name').value = '';
+  document.getElementById('lobby-name').value = '';
+  document.getElementById('player-name-display').textContent = '—';
   updateUI();
 }
-async function sendChatMessage(){
-  if(!joined||!chatRef)return;
-  const input=document.getElementById('chat-input'); const text=input.value.trim();
-  if(!text)return;
-  await chatRef.push({player:playerName,text,ts:Date.now()});
-  input.value='';
-}
-function appendChatMessage(msg){
-  const c=document.getElementById('chat-container');
-  const d=document.createElement('div');
-  d.textContent=`${msg.player}: ${msg.text}`; c.appendChild(d); c.scrollTop=c.scrollHeight;
-}
-function updateUI(players={},winner=null){
-  const cont=document.getElementById('game-container'); cont.innerHTML='';
-  playerHand.forEach((c,i)=>{const d=document.createElement('div'); d.textContent=c; d.className='card'; if(selectedCards.has(i))d.classList.add('selected'); d.onclick=()=>toggleCard(i); cont.appendChild(d);});
-  const pileCont=document.getElementById('pile-container'); pileCont.innerHTML='';
-  pile.forEach(p=>{const d=document.createElement('div'); d.textContent=p.declared+" (by "+p.player+")"; pileCont.appendChild(d);});
-  const list=document.getElementById('players-list'); list.innerHTML='';
-  Object.entries(players).forEach(([n,h])=>{const li=document.createElement('li'); li.textContent=`${n} - ${h.length}`; if(n===currentTurn)li.style.fontWeight='bold'; list.appendChild(li);});
-  document.getElementById('game-info').textContent=`current Turn: ${currentTurn}`;
-  document.getElementById('btn-play').disabled=!joined||currentTurn!==playerName||winner;
-  document.getElementById('btn-draw').disabled=!joined||currentTurn!==playerName||winner;
-  document.getElementById('btn-bullshit').disabled=!joined||pile.length===0||winner;
+
+/* UI update */
+function updateUI(players = {}, winner = null){
+  const container = document.getElementById('game-container');
+  if(container){
+    container.innerHTML = '';
+    playerHand.forEach((c,i) => {
+      const d = document.createElement('div');
+      d.className = 'card';
+      if(selectedCards.has(i)) d.classList.add('selected');
+      d.textContent = c;
+      d.onclick = () => { if(selectedCards.has(i)) selectedCards.delete(i); else selectedCards.add(i); updateUI(); };
+      container.appendChild(d);
+    });
+  }
+
+  const pileContainer = document.getElementById('pile-container');
+  if(pileContainer){
+    pileContainer.innerHTML = '';
+    (pile.slice().reverse()).forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'pile-card';
+      div.textContent = (p.player === playerName) ? `${p.card} (${p.declared})` : `${p.declared} (by ${p.player})`;
+      pileContainer.appendChild(div);
+    });
+  }
+
+  const list = document.getElementById('players-list');
+  if(list){
+    list.innerHTML = '';
+    Object.entries(players).forEach(([name,hand]) => {
+      const li = document.createElement('li');
+      li.textContent = `${name} - ${(hand||[]).length} card${(hand||[]).length !== 1 ? 's' : ''}`;
+      if(name === currentTurn) li.style.fontWeight = 'bold';
+      if((hand||[]).length === 0) li.style.textDecoration = 'underline';
+      list.appendChild(li);
+    });
+  }
+
+  const info = document.getElementById('game-info');
+  if(info) info.textContent = `Current Turn: ${currentTurn || '—'}`;
+
+  // enable/disable controls
+  const btnPlay = document.getElementById('btn-play');
+  const btnDraw = document.getElementById('btn-draw');
+  const btnBS = document.getElementById('btn-bullshit');
+  const btnLeave = document.getElementById('btn-leave');
+
+  if(btnPlay) btnPlay.disabled = !joined || currentTurn !== playerName || !!winner;
+  if(btnDraw) btnDraw.disabled = !joined || currentTurn !== playerName || !!winner;
+  if(btnBS) btnBS.disabled = !joined || pile.length === 0 || !!winner;
+  if(btnLeave) btnLeave.disabled = false; // always allow leaving
+
+  // chat
+  const chatSend = document.getElementById('chat-send');
+  const chatInput = document.getElementById('chat-input');
+  if(chatSend && chatInput){
+    chatSend.disabled = !joined;
+    chatInput.disabled = !joined;
+  }
 }
 
-/* ---------------- Event Bindings ---------------- */
-document.getElementById('btn-join').onclick=joinLobby;
-document.getElementById('btn-play').onclick=playSelected;
-document.getElementById('btn-draw').onclick=drawCard;
-document.getElementById('btn-bullshit').onclick=callBS;
-document.getElementById('btn-leave').onclick=leaveLobby;
-document.getElementById('chat-send').onclick=sendChatMessage;
-document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendChatMessage();});
+/* hook up all event listeners after DOM ready */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-join').onclick = joinLobby;
+  document.getElementById('btn-play').onclick = playSelected;
+  document.getElementById('btn-draw').onclick = drawCard;
+  document.getElementById('btn-bullshit').onclick = callBS;
+  document.getElementById('btn-leave').onclick = leaveLobby;
+  document.getElementById('chat-send').onclick = sendChat;
+  document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key === 'Enter') sendChat(); });
+
+  updateUI();
+  dlog('client initialized');
+});
 </script>
 </body>
 </html>
